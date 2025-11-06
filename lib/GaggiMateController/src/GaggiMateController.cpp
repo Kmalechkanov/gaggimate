@@ -39,41 +39,6 @@ void GaggiMateController::setup() {
     this->brewBtn = new DigitalInput(_config.brewButtonPin, [this](const bool state) { _ble.sendBrewBtnState(state); });
     this->steamBtn = new DigitalInput(_config.steamButtonPin, [this](const bool state) { _ble.sendSteamBtnState(state); });
 
-    // 4-Pin peripheral port
-    if (!Wire.begin(_config.sunriseSdaPin, _config.sunriseSclPin, 400000)) {
-        ESP_LOGE(LOG_TAG, "Failed to initialize I2C bus");
-    }
-    delay(500);
-    int nDevices;
-    ESP_LOGI("", "Scanning...");
-    byte error, address;
-    nDevices = 0;
-    for(address = 1; address < 127; address++ ) {
-        ESP_LOGV(LOG_TAG, "Scanning 0x%02x", address);
-        Wire.beginTransmission(address);
-        error = Wire.endTransmission();
-        if (error == 0) {
-            ESP_LOGI("", "I2C device found at address 0x%02x", address);
-            nDevices++;
-        }
-        else if (error==4) {
-            ESP_LOGI("", "Unknow error at address 0x%02x", address);
-        }
-    }
-    if (nDevices == 0) {
-        ESP_LOGI("", "No I2C devices found");
-    }
-    else {
-        ESP_LOGI("", "done");
-    }
-    this->ledController = new LedController(&Wire);
-    this->distanceSensor = new DistanceSensor(&Wire, [this](int distance) { _ble.sendTofMeasurement(distance); });
-    if (this->ledController->isAvailable()) {
-        _config.capabilites.ledControls = true;
-        _config.capabilites.tof = true;
-        _ble.registerLedControlCallback(
-            [this](uint8_t channel, uint8_t brightness) { ledController->setChannel(channel, brightness); });
-    }
 
     String systemInfo = make_system_info(_config, _version);
     _ble.initServer(systemInfo);
@@ -88,9 +53,6 @@ void GaggiMateController::setup() {
     if (_config.capabilites.pressure) {
         pressureSensor->setup();
         _ble.registerPressureScaleCallback([this](float scale) { this->pressureSensor->setScale(scale); });
-    }
-    if (_config.capabilites.ledControls) {
-        this->ledController->setup();
     }
     if (_config.capabilites.tof) {
         // this->distanceSensor->setup();

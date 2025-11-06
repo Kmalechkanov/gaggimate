@@ -3,9 +3,7 @@
 #include "ControllerConfig.h"
 #include "NimBLEServerController.h"
 #include <peripherals/DigitalInput.h>
-#include <peripherals/DistanceSensor.h>
 #include <peripherals/Heater.h>
-#include <peripherals/LedController.h>
 #include <peripherals/Max31855Thermocouple.h>
 #include <peripherals/PressureSensor.h>
 #include <peripherals/Pump.h>
@@ -45,8 +43,6 @@ class GaggiMateController {
     DigitalInput *brewBtn = nullptr;
     DigitalInput *steamBtn = nullptr;
     PressureSensor *pressureSensor = nullptr;
-    LedController *ledController = nullptr;
-    DistanceSensor *distanceSensor = nullptr;
 
     std::vector<ControllerConfig> configs;
 

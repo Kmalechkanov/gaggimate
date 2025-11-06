@@ -8,6 +8,7 @@
 #include <display/core/zones.h>
 #include <display/drivers/LilyGoDriver.h>
 #include <display/drivers/LilyGoTDisplayDriver.h>
+#include <display/drivers/LillyGoTDisplayLongDriver.h>
 #include <display/drivers/WaveshareDriver.h>
 #include <display/drivers/common/LV_Helper.h>
 #include <display/ui/default/lvgl/ui_theme_manager.h>
@@ -281,7 +282,9 @@ void DefaultUI::onProfileSelect() {
 }
 
 void DefaultUI::setupPanel() {
-    if (LilyGoTDisplayDriver::getInstance()->isCompatible()) {
+    if (LillyGoTDisplayLongDriver::getInstance()->isCompatible()) {
+        panelDriver = LillyGoTDisplayLongDriver::getInstance();
+    } else if (LilyGoTDisplayDriver::getInstance()->isCompatible()) {
         panelDriver = LilyGoTDisplayDriver::getInstance();
     } else if (LilyGoDriver::getInstance()->isCompatible()) {
         panelDriver = LilyGoDriver::getInstance();

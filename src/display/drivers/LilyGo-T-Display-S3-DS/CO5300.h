@@ -10,7 +10,7 @@ class CO5300 : public Arduino_CO5300 {
            int16_t h = CO5300_MAXHEIGHT, uint8_t col_offset1 = 0, uint8_t row_offset1 = 0, uint8_t col_offset2 = 0,
            uint8_t row_offset2 = 0, uint8_t color_order = CO5300_MADCTL_RGB);
     void setRotation(uint8_t r) override;
-
+    void setBrightness(int t); // because im using another Arduino_GFX_Library and this function is missing
   private:
     uint8_t _color_order;
 };
