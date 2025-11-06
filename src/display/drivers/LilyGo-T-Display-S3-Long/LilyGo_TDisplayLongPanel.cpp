@@ -2,7 +2,6 @@
 #include "Arduino_GFX_Library.h"
 #include "Arduino_DriveBus_Library.h"
 #include "TouchDrvAXS15231B.h"
-#include "AXS15231B.h"
 #include <Wire.h>
 #include "pin_config.h"
 #include <esp_adc_cal.h>
@@ -33,15 +32,12 @@ LilyGo_TDisplayLongPanel::~LilyGo_TDisplayLongPanel() {
 }
 
 bool LilyGo_TDisplayLongPanel::begin() {
-    printf("LillyGoTDisplayLongDriver InitDisplay\n");
     bool displayOK = initDisplay();
     if (!displayOK) {
-        printf("LillyGoTDisplayLongDriver InitDisplay Failed\n");
         log_e("Display initialization failed!");
         return false;
     }
     
-    printf("LillyGoTDisplayLongDriver InitTuch\n");
     bool touchOK = initTouch();
     if (!touchOK) {
         printf("LillyGoTDisplayLongDriver InitTuch failed\n");
@@ -85,6 +81,7 @@ void LilyGo_TDisplayLongPanel::enableTimerWakeup(uint64_t time_in_us) {
 
 void LilyGo_TDisplayLongPanel::sleep() {
 }
+
 void LilyGo_TDisplayLongPanel::wakeup() {}
 
 uint8_t LilyGo_TDisplayLongPanel::getPoint(int16_t *x_array, int16_t *y_array, uint8_t get_point) {

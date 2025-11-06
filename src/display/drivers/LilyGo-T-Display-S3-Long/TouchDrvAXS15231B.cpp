@@ -32,6 +32,8 @@ bool TouchDrvAXS15231B::begin(TwoWire &wire, uint8_t address, int sda, int scl) 
     digitalWrite(TOUCH_RES, LOW); delay(10);
     digitalWrite(TOUCH_RES, HIGH); delay(2);
 
+    pinMode(TOUCH_INT, INPUT_PULLUP);
+
     _wire->begin(sda, scl);
     _wire->beginTransmission(_addr);
     if (_wire->endTransmission() == 0) {
@@ -41,7 +43,16 @@ bool TouchDrvAXS15231B::begin(TwoWire &wire, uint8_t address, int sda, int scl) 
 }
 
 bool TouchDrvAXS15231B::isPressed() {
-    return true; //todo make this in some proper way
+    static bool lastState = false;
+    bool current = (digitalRead(TOUCH_INT) == LOW);
+
+    if (current != lastState) {
+        delay(2); // debounce
+        current = (digitalRead(TOUCH_INT) == LOW);
+    }
+
+    lastState = current;
+    return current;
 }
 
 uint8_t read_touchpad_cmd[11] = {0xb5, 0xab, 0xa5, 0x5a, 0x0, 0x0, 0x0, 0x8};
@@ -52,7 +63,10 @@ uint8_t TouchDrvAXS15231B::getPoint(int16_t *x_array, int16_t *y_array, uint8_t 
     _wire->write(read_touchpad_cmd, 8);
     _wire->endTransmission();
     _wire->requestFrom(_addr, AXS_TOUCH_TWO_POINT_LEN);
-    while (!_wire->available());
+    uint32_t start = millis();
+    while (_wire->available() < AXS_TOUCH_TWO_POINT_LEN) {
+        if (millis() - start > 50) return false;  // timeout
+    }
     _wire->readBytes(buff, AXS_TOUCH_TWO_POINT_LEN);
 
     uint16_t pointX;
@@ -62,19 +76,29 @@ uint8_t TouchDrvAXS15231B::getPoint(int16_t *x_array, int16_t *y_array, uint8_t 
     type = AXS_GET_GESTURE_TYPE(buff);
     pointX = AXS_GET_POINT_X(buff,0);
     pointY = AXS_GET_POINT_Y(buff,0);
-    ESP_LOGV("Touch", "Registering listener: type %d x %d y %d", type, pointX, pointY);
+
+    if (type != 0 || pointX != 0 || pointY != 0) {
+        ESP_LOGV("Touch", "Registering listener: type %d x %d y %d", type, pointX, pointY);
+    }
 
     if (!type && (pointX || pointY)) {
         printf("read touch\n");
 
-        pointX = (640-pointX);
-        if(pointX > 640) pointX = 640;
-        if(pointY > 180) pointY = 180;
-            *x_array = pointX;
-            *y_array = pointY;
-        return true;
+        if (pointX < 2 && pointY < 2) {
+            printf("ghost touch\n");
+            return 0;
+        }
+
+        pointX = TFT_HEIGHT - pointX; // 640 - pointX
+        if (pointX >= TFT_HEIGHT) pointX = TFT_HEIGHT - 1;
+        if (pointY >= TFT_WIDTH)  pointY = TFT_WIDTH - 1; 
+
+        *x_array = pointY; // might swap later
+        *y_array = pointX;
+        return 1;
     }
-    return false;
+
+    return 0;
 }
 
 

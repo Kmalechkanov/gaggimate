@@ -23,7 +23,6 @@
 #include <display/drivers/common/ext.h>
 #include "Arduino_DataBus.h"
 #include "TouchDrvAXS15231B.h"
-#include "AXS15231B.h"
 #include "Arduino_GFX_Library.h"
 
 enum LilyGo_TDisplayLongPanel_Wakeup_Method {
