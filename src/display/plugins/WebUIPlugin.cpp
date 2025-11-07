@@ -27,18 +27,18 @@ void WebUIPlugin::setup(Controller *_controller, PluginManager *_pluginManager) 
     this->controller = _controller;
     this->profileManager = _controller->getProfileManager();
     this->pluginManager = _pluginManager;
-    this->ota = new GitHubOTA(
-        BUILD_GIT_VERSION, controller->getSystemInfo().version,
-        RELEASE_URL + (controller->getSettings().getOTAChannel() == "latest" ? "latest" : "tag/nightly"),
-        [this](uint8_t phase) {
-            pluginManager->trigger("ota:update:phase", "phase", phase);
-            updateOTAProgress(phase, 0);
-        },
-        [this](uint8_t phase, int progress) {
-            pluginManager->trigger("ota:update:progress", "progress", progress);
-            updateOTAProgress(phase, progress);
-        },
-        "display-firmware.bin", "display-filesystem.bin", "board-firmware.bin");
+    // this->ota = new GitHubOTA(
+    //     BUILD_GIT_VERSION, controller->getSystemInfo().version,
+    //     RELEASE_URL + (controller->getSettings().getOTAChannel() == "latest" ? "latest" : "tag/nightly"),
+    //     [this](uint8_t phase) {
+    //         pluginManager->trigger("ota:update:phase", "phase", phase);
+    //         updateOTAProgress(phase, 0);
+    //     },
+    //     [this](uint8_t phase, int progress) {
+    //         pluginManager->trigger("ota:update:progress", "progress", progress);
+    //         updateOTAProgress(phase, progress);
+    //     },
+    //     "display-firmware.bin", "display-filesystem.bin", "board-firmware.bin");
     pluginManager->on("controller:wifi:connect", [this](Event const &event) {
         apMode = event.getInt("AP");
         start();

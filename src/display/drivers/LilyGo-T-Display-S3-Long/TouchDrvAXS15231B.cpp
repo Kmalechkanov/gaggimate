@@ -1,100 +1,72 @@
 #include "TouchDrvAXS15231B.h"
+#include "Arduino_DriveBus_Library.h"
 #include "pin_config.h"
 #include "Arduino.h"
+#include <Wire.h>
 
-#define AXS_TOUCH_TWO_POINT_LEN             14  // (AXS_TOUCH_ONE_POINT_LEN *  2) +  2  Bytes
-#define AXS_TOUCH_ONE_POINT_LEN             6
-#define AXS_TOUCH_BUF_HEAD_LEN              2
+#define LCD_WIDTH 180
+#define LCD_HEIGHT 640
 
-#define AXS_TOUCH_GESTURE_POS               0
-#define AXS_TOUCH_POINT_NUM                 1
-#define AXS_TOUCH_EVENT_POS                 2
-#define AXS_TOUCH_X_H_POS                   2
-#define AXS_TOUCH_X_L_POS                   3
-#define AXS_TOUCH_ID_POS                    4
-#define AXS_TOUCH_Y_H_POS                   4
-#define AXS_TOUCH_Y_L_POS                   5
-#define AXS_TOUCH_WEIGHT_POS                6
-#define AXS_TOUCH_AREA_POS 
+#define LCD_CS TFT_QSPI_CS
+#define LCD_SCLK TFT_QSPI_SCK
+#define LCD_SDIO0 TFT_QSPI_D0
+#define LCD_SDIO1 TFT_QSPI_D1
+#define LCD_SDIO2 TFT_QSPI_D2
+#define LCD_SDIO3 TFT_QSPI_D3
+#define LCD_RST TFT_QSPI_RST
 
-#define AXS_GET_POINT_NUM(buf) buf[AXS_TOUCH_POINT_NUM]
-#define AXS_GET_GESTURE_TYPE(buf)  buf[AXS_TOUCH_GESTURE_POS]
-#define AXS_GET_POINT_X(buf,point_index) (((uint16_t)(buf[AXS_TOUCH_ONE_POINT_LEN*point_index+AXS_TOUCH_X_H_POS] & 0x0F) <<8) + (uint16_t)buf[AXS_TOUCH_ONE_POINT_LEN*point_index+AXS_TOUCH_X_L_POS])
-#define AXS_GET_POINT_Y(buf,point_index) (((uint16_t)(buf[AXS_TOUCH_ONE_POINT_LEN*point_index+AXS_TOUCH_Y_H_POS] & 0x0F) <<8) + (uint16_t)buf[AXS_TOUCH_ONE_POINT_LEN*point_index+AXS_TOUCH_Y_L_POS])
-#define AXS_GET_POINT_EVENT(buf,point_index) (buf[AXS_TOUCH_ONE_POINT_LEN*point_index+AXS_TOUCH_EVENT_POS] >> 6)
+static const uint8_t read_touchpad_cmd[] = {0xB5, 0xAB, 0xA5, 0x5A, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00};
 
-bool TouchDrvAXS15231B::begin(TwoWire &wire, uint8_t address, int sda, int scl) {
-    _wire = &wire;
-    _addr = address;
+static uint8_t Image_Flag = 0;
+static size_t CycleTime = 0;
 
-    pinMode(TOUCH_RES, OUTPUT); //todo move touch_res to to be from outside
-    digitalWrite(TOUCH_RES, HIGH); delay(2);
-    digitalWrite(TOUCH_RES, LOW); delay(10);
-    digitalWrite(TOUCH_RES, HIGH); delay(2);
+std::shared_ptr<Arduino_IIC_DriveBus> IIC_Bus =
+    std::make_shared<Arduino_HWIIC>(TOUCH_IICSDA, TOUCH_IICSCL, &Wire);
 
+volatile bool Touch_INT = false;
+
+void AXS15231_Touch(void)
+{
+    Touch_INT = true;
+}
+
+bool TouchDrvAXS15231B::begin() {
+    pinMode(TOUCH_RES, OUTPUT);
     pinMode(TOUCH_INT, INPUT_PULLUP);
 
-    _wire->begin(sda, scl);
-    _wire->beginTransmission(_addr);
-    if (_wire->endTransmission() == 0) {
-        return true; // found
-    }
-    return false;
+    attachInterrupt(TOUCH_INT, AXS15231_Touch, FALLING);
+    IIC_Bus->begin();
+    
+    return true;
 }
 
 bool TouchDrvAXS15231B::isPressed() {
-    static bool lastState = false;
-    bool current = (digitalRead(TOUCH_INT) == LOW);
-
-    if (current != lastState) {
-        delay(2); // debounce
-        current = (digitalRead(TOUCH_INT) == LOW);
-    }
-
-    lastState = current;
-    return current;
+    return Touch_INT;
 }
 
-uint8_t read_touchpad_cmd[11] = {0xb5, 0xab, 0xa5, 0x5a, 0x0, 0x0, 0x0, 0x8};
 uint8_t TouchDrvAXS15231B::getPoint(int16_t *x_array, int16_t *y_array, uint8_t get_point) {
-    uint8_t buff[20] = {0};
+    Touch_INT = false;
+    uint8_t temp_buf[8] = {0};
 
-    _wire->beginTransmission(_addr);
-    _wire->write(read_touchpad_cmd, 8);
-    _wire->endTransmission();
-    _wire->requestFrom(_addr, AXS_TOUCH_TWO_POINT_LEN);
-    uint32_t start = millis();
-    while (_wire->available() < AXS_TOUCH_TWO_POINT_LEN) {
-        if (millis() - start > 50) return false;  // timeout
-    }
-    _wire->readBytes(buff, AXS_TOUCH_TWO_POINT_LEN);
+    if (millis() > CycleTime)
+    {
+        IIC_Bus->IIC_ReadCData_Data(0x3B, read_touchpad_cmd, sizeof(read_touchpad_cmd),
+                                    temp_buf, sizeof(temp_buf));
 
-    uint16_t pointX;
-    uint16_t pointY;
-    uint16_t type = 0;
-
-    type = AXS_GET_GESTURE_TYPE(buff);
-    pointX = AXS_GET_POINT_X(buff,0);
-    pointY = AXS_GET_POINT_Y(buff,0);
-
-    if (type != 0 || pointX != 0 || pointY != 0) {
-        ESP_LOGV("Touch", "Registering listener: type %d x %d y %d", type, pointX, pointY);
+        CycleTime = millis() + 20;
     }
 
-    if (!type && (pointX || pointY)) {
-        printf("read touch\n");
+    uint8_t fingers_number = temp_buf[1];
+    uint8_t touch_event = temp_buf[2] >> 4;
+    
+    if ((fingers_number == 1) && (touch_event == 0x08)) // Touch inspection and judgment
+    {
+        uint16_t touch_x = ((uint16_t)(temp_buf[4] & 0B00001111) << 8) | (uint16_t)temp_buf[5];
+        uint16_t touch_y = LCD_HEIGHT - (((uint16_t)(temp_buf[2] & 0B00001111) << 8) | (uint16_t)temp_buf[3]);
 
-        if (pointX < 2 && pointY < 2) {
-            printf("ghost touch\n");
-            return 0;
-        }
-
-        pointX = TFT_HEIGHT - pointX; // 640 - pointX
-        if (pointX >= TFT_HEIGHT) pointX = TFT_HEIGHT - 1;
-        if (pointY >= TFT_WIDTH)  pointY = TFT_WIDTH - 1; 
-
-        *x_array = pointY; // might swap later
-        *y_array = pointX;
+        Serial.printf("Touch X: %d Y: %d Event: %#X Fingers: %d\n", touch_x, touch_y, touch_event, fingers_number);
+        *x_array = touch_x;
+        *y_array = touch_y;
         return 1;
     }
 

@@ -23,6 +23,7 @@
 #include <display/drivers/common/ext.h>
 #include "Arduino_DataBus.h"
 #include "TouchDrvAXS15231B.h"
+#include "AXS15231.h"
 #include "Arduino_GFX_Library.h"
 
 enum LilyGo_TDisplayLongPanel_Wakeup_Method {
@@ -81,9 +82,9 @@ class LilyGo_TDisplayLongPanel : public Display {
 
   private:
     TouchDrvAXS15231B *_touchDrv = nullptr;
-    Arduino_DataBus *displayBus = nullptr;
 
-    Arduino_GFX *display = nullptr;
+    Arduino_DataBus *displayBus = nullptr;
+    AXS15231 *display = nullptr;
 
   private:
     uint8_t currentBrightness = 0;

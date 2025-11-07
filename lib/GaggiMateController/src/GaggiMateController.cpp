@@ -22,7 +22,7 @@ void GaggiMateController::setup() {
 
     this->thermocouple = new Max31855Thermocouple(
         _config.maxCsPin, _config.maxMisoPin, _config.maxSckPin, [this](float temperature) { /* noop */ },
-        [this]() { thermalRunawayShutdown(); });
+                [this]() { thermalRunawayShutdown(); });
     this->heater = new Heater(
         this->thermocouple, _config.heaterPin, [this]() { thermalRunawayShutdown(); },
         [this](float Kp, float Ki, float Kd) { _ble.sendAutotuneResult(Kp, Ki, Kd); });
@@ -126,15 +126,15 @@ void GaggiMateController::loop() {
 void GaggiMateController::registerBoardConfig(ControllerConfig config) { configs.push_back(config); }
 
 void GaggiMateController::detectBoard() {
-    pinMode(DETECT_EN_PIN, OUTPUT);
-    pinMode(DETECT_VALUE_PIN, INPUT_PULLDOWN);
-    digitalWrite(DETECT_EN_PIN, HIGH);
-    uint16_t millivolts = analogReadMilliVolts(DETECT_VALUE_PIN);
-    digitalWrite(DETECT_EN_PIN, LOW);
-    int boardId = round(((float)millivolts) / 100.0f - 0.5f);
-    ESP_LOGI(LOG_TAG, "Detected Board ID: %d", boardId);
+    // pinMode(DETECT_EN_PIN, OUTPUT);
+    // pinMode(DETECT_VALUE_PIN, INPUT_PULLDOWN);
+    // digitalWrite(DETECT_EN_PIN, HIGH);
+    // uint16_t millivolts = analogReadMilliVolts(DETECT_VALUE_PIN);
+    // digitalWrite(DETECT_EN_PIN, LOW);
+    // int boardId = round(((float)millivolts) / 100.0f - 0.5f);
+    ESP_LOGI(LOG_TAG, "Detected Board ID: %d", 3);
     for (ControllerConfig config : configs) {
-        if (config.autodetectValue == boardId) {
+        if (config.autodetectValue == 3) {
             _config = config;
             ESP_LOGI(LOG_TAG, "Using Board: %s", _config.name.c_str());
             return;

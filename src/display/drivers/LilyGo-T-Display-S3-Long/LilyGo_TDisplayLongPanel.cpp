@@ -2,13 +2,20 @@
 #include "Arduino_GFX_Library.h"
 #include "Arduino_DriveBus_Library.h"
 #include "TouchDrvAXS15231B.h"
+#include "AXS15231.h"
 #include <Wire.h>
 #include "pin_config.h"
 #include <esp_adc_cal.h>
 
+#undef min
+#undef max
+#include <algorithm>
+using std::min;
+using std::max;
+
 LilyGo_TDisplayLongPanel::LilyGo_TDisplayLongPanel()
     : displayBus(nullptr), display(nullptr), _touchDrv(nullptr), _wakeupMethod(LILYGOWIDE_T_DISPLAY_WAKEUP_FROM_NONE),
-      _sleepTimeUs(0), currentBrightness(255) {
+      _sleepTimeUs(0), currentBrightness(0) {
     _rotation = 0;
 }
 
@@ -20,7 +27,7 @@ LilyGo_TDisplayLongPanel::~LilyGo_TDisplayLongPanel() {
         _touchDrv = nullptr;
     }
     if (display) {
-        // display->Display_Brightness(0);
+        display->setBrightness(0);
         digitalWrite(TFT_BL, LOW);
         delete display;
         display = nullptr;
@@ -64,6 +71,23 @@ void LilyGo_TDisplayLongPanel::uninstallSD() {
 }
 
 void LilyGo_TDisplayLongPanel::setBrightness(uint8_t level) {
+    uint16_t brightness = level * 16;
+
+    brightness = brightness > 255 ? 255 : brightness;
+    brightness = brightness < 0 ? 0 : brightness;
+
+    if (brightness > this->currentBrightness) {
+        for (int i = this->currentBrightness; i <= brightness; i++) {
+            display->setBrightness(i);
+            delay(1);
+        }
+    } else {
+        for (int i = this->currentBrightness; i >= brightness; i--) {
+            display->setBrightness(i);
+            delay(1);
+        }
+    }
+    this->currentBrightness = brightness;
 }
 
 uint8_t LilyGo_TDisplayLongPanel::getBrightness() { return (this->currentBrightness + 1) / 16; }
@@ -91,6 +115,30 @@ uint8_t LilyGo_TDisplayLongPanel::getPoint(int16_t *x_array, int16_t *y_array, u
 
     uint8_t points = _touchDrv->getPoint(x_array, y_array, get_point);
 
+     for (uint8_t i = 0; i < points; i++) {
+        int16_t rawX = x_array[i];// + hwConfig.lcd_gram_offset_x;
+        int16_t rawY = y_array[i];// + hwConfig.lcd_gram_offset_y;
+
+        switch (_rotation) {
+        case 1: // 90°
+            x_array[i] = rawY;
+            y_array[i] = width() - rawX;
+            break;
+        case 2: // 180°
+            x_array[i] = width() - rawX;
+            y_array[i] = height() - rawY;
+            break;
+        case 3: // 270°
+            x_array[i] = height() - rawY;
+            y_array[i] = rawX;
+            break;
+        default: // 0°
+            x_array[i] = rawX;
+            y_array[i] = rawY;
+            break;
+        }
+    }
+
     return points;
 }
 
@@ -102,31 +150,51 @@ bool LilyGo_TDisplayLongPanel::isPressed() {
 }
 
 uint16_t LilyGo_TDisplayLongPanel::getBattVoltage(void) {
-    esp_adc_cal_characteristics_t adc_chars;
-    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_12, ADC_WIDTH_BIT_12, 1100, &adc_chars);
-
-    const int number_of_samples = 20;
-    uint32_t sum = 0;
-    for (int i = 0; i < number_of_samples; i++) {
-        sum += analogRead(PIN_BAT_VOLT);
-        delay(2);
-    }
-    sum = sum / number_of_samples;
-
-    return esp_adc_cal_raw_to_voltage(sum, &adc_chars) * 2;
+    return 0;
 }
 
 void LilyGo_TDisplayLongPanel::pushColors(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t *data) {
     printf("Panel pushColors\n");    
-    if (displayBus && display) {
-        //optimization instead of draw16bit
-        // display->startWrite();
-        // display->setAddrWindow(x, y, width, height);
-        // display->writePixels(data, width * height);
-        // display->endWrite();
-        display->draw16bitRGBBitmap(x, y, data, width, height);
-        printf("Panel draw16BitRGB\n");    
+    if (!(displayBus && display)) {
+        printf("Panel pushColors no display\n");    
+        return;
     }
+    printf("Panel pushColors: x=%d y=%d w=%d h=%d\n", x, y, width, height);
+
+    // Clip to display bounds
+    int16_t startX = max((int16_t)0, (int16_t)x);
+    int16_t startY = max((int16_t)0, (int16_t)y);
+    int16_t clipW  = min((int16_t)(width  - (startX - x)), (int16_t)(TFT_WIDTH  - startX));
+    int16_t clipH  = min((int16_t)(height - (startY - y)), (int16_t)(TFT_HEIGHT - startY));
+
+    if (clipW <= 0 || clipH <= 0) {
+        printf("Nothing to draw (clipped completely outside screen)\n");
+        return;
+    }
+
+    printf("Panel clip: startX=%d startY=%d clipW=%d clipH=%d\n", startX, startY, clipW, clipH);
+
+    // Allocate temporary buffer for 90° clockwise rotation
+    uint16_t *rotated = (uint16_t*)malloc(clipW * clipH * sizeof(uint16_t));
+    if (!rotated) {
+        printf("Failed to allocate rotation buffer\n");
+        return;
+    }
+
+    // Rotate 90° clockwise: data[y*width + x] -> rotated[x*clipH + (clipH - y - 1)]
+    for (int16_t row = 0; row < clipH; row++) {
+        for (int16_t col = 0; col < clipW; col++) {
+            rotated[col * clipH + (clipH - row - 1)] = 
+                data[(row + (startY - y)) * width + (col + (startX - x))];
+        }
+    }
+
+    // Draw rotated bitmap (width and height swapped)
+    display->draw16bitRGBBitmap(startX, startY, rotated, clipH, clipW);
+
+    free(rotated);
+        
+    printf("Panel draw16BitRGB\n");    
 }
 
 void LilyGo_TDisplayLongPanel::setRotation(uint8_t rotation) {
@@ -140,7 +208,7 @@ void LilyGo_TDisplayLongPanel::setRotation(uint8_t rotation) {
 bool LilyGo_TDisplayLongPanel::initTouch() {
     TouchDrvAXS15231B *tmp = new TouchDrvAXS15231B();
 
-    if (tmp->begin(Wire, 0x3B, TOUCH_IICSDA, TOUCH_IICSCL)) {
+    if (tmp->begin()) {
         _touchDrv = tmp;
         log_i("Successfully initialized %s touch controller!", _touchDrv->getModelName());
         return true;
@@ -164,31 +232,38 @@ bool LilyGo_TDisplayLongPanel::initDisplay() {
             TFT_QSPI_D3   // D3
         );
 
-        display = new Arduino_AXS15231(displayBus, TFT_QSPI_RST, 0 /*_rotation*/, false, TFT_HEIGHT, TFT_WIDTH); 
+        display = new AXS15231(displayBus, TFT_QSPI_RST, 0 /*_rotation*/, false, TFT_HEIGHT, TFT_WIDTH); 
     }
     
-    pinMode(TFT_BL, OUTPUT);
-    digitalWrite(TFT_BL, HIGH);
+       //this for constant brigtness
+    // pinMode(TFT_BL, OUTPUT);
+    // digitalWrite(TFT_BL, HIGH);
+
+    //this for brigtness control
     
+    
+    ledcAttachPin(TFT_BL, 1);
+    ledcSetup(1, 2000, 8);
+    ledcWrite(1, 0);  // Start off
+    for (int i = 0; i <= 150; i++) {
+        ledcWrite(1, i);
+        delay(3);
+    }
+
     bool success = display->begin();
     if (!success) {
         ESP_LOGE("LilyGo_TDisplayLongPanel", "Failed to initialize display");
         return false;
     }
 
-    display->fillScreen(WHITE);
+    // this->setBrightness(150);
+    // this->setRotation(1);
 
-    this->setRotation(_rotation);
+    display->fillScreen(GREEN);
 
-    displayBus->writeCommand(CO5300_C_PTLON);
-    display->fillScreen(RED);
+    // displayBus->writeCommand(CO5300_C_PTLON);
+    // display->fillScreen(BLACK);
 
     ESP_LOGI("LilyGo_TDisplayLongPanel", "Success");
-
-    // for (int i = 0; i <= 255; i++)
-    // {
-    //     ledcWrite(1, i);
-    //     delay(3);
-    // }
     return success;
 }
