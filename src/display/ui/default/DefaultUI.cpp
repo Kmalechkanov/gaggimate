@@ -8,7 +8,6 @@
 #include <display/core/zones.h>
 #include <display/drivers/AmoledDisplayDriver.h>
 #include <display/drivers/LilyGoDriver.h>
-#include <display/drivers/LillyGoTDisplayLongDriver.h>
 #include <display/drivers/WaveshareDriver.h>
 #include <display/drivers/common/LV_Helper.h>
 #include <display/ui/default/lvgl/ui_theme_manager.h>
@@ -310,20 +309,6 @@ void DefaultUI::onProfileSelect() {
 }
 
 void DefaultUI::setupPanel() {
-    if (LillyGoTDisplayLongDriver::getInstance()->isCompatible()) {
-        panelDriver = LillyGoTDisplayLongDriver::getInstance();
-    } else if (LilyGoTDisplayDriver::getInstance()->isCompatible()) {
-        panelDriver = LilyGoTDisplayDriver::getInstance();
-    } else if (LilyGoDriver::getInstance()->isCompatible()) {
-        panelDriver = LilyGoDriver::getInstance();
-    } else if (WaveshareDriver::getInstance()->isCompatible()) {
-        panelDriver = WaveshareDriver::getInstance();
-    } else {
-        Serial.println("No compatible display driver found");
-        delay(10000);
-        ESP.restart();
-    }
-    panelDriver->init();
     ui_init();
 
     // Set initial brightness based on settings

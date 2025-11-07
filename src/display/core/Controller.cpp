@@ -23,6 +23,7 @@
 #ifndef GAGGIMATE_HEADLESS
 #include <display/drivers/AmoledDisplayDriver.h>
 #include <display/drivers/LilyGoDriver.h>
+#include <display/drivers/LillyGoTDisplayLongDriver.h>
 #include <display/drivers/WaveshareDriver.h>
 #endif
 
@@ -108,7 +109,9 @@ void Controller::connect() {
 
 #ifndef GAGGIMATE_HEADLESS
 void Controller::setupPanel() {
-    if (AmoledDisplayDriver::getInstance()->isCompatible()) {
+    if (LillyGoTDisplayLongDriver::getInstance()->isCompatible()) {
+        driver = LillyGoTDisplayLongDriver::getInstance();
+    } else if (AmoledDisplayDriver::getInstance()->isCompatible()) {
         driver = AmoledDisplayDriver::getInstance();
     } else if (LilyGoDriver::getInstance()->isCompatible()) {
         driver = LilyGoDriver::getInstance();

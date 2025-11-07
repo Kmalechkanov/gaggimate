@@ -22,7 +22,7 @@ void GaggiMateController::setup() {
 
     this->thermocouple = new Max31855Thermocouple(
         _config.maxCsPin, _config.maxMisoPin, _config.maxSckPin, [this](float temperature) { /* noop */ },
-                [this]() { thermalRunawayShutdown(); });
+        [this]() { thermalRunawayShutdown(); });
     this->heater = new Heater(
         this->thermocouple, _config.heaterPin, [this]() { thermalRunawayShutdown(); },
         [this](float Kp, float Ki, float Kd) { _ble.sendAutotuneResult(Kp, Ki, Kd); });
