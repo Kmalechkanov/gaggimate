@@ -61,12 +61,17 @@ uint8_t TouchDrvAXS15231B::getPoint(int16_t *x_array, int16_t *y_array, uint8_t 
     
     if ((fingers_number == 1) && (touch_event == 0x08)) // Touch inspection and judgment
     {
-        uint16_t touch_x = ((uint16_t)(temp_buf[4] & 0B00001111) << 8) | (uint16_t)temp_buf[5];
+        uint16_t touch_x = ((uint16_t)(temp_buf[4] & 0x0F) << 8) | (uint16_t)temp_buf[5];
         uint16_t touch_y = LCD_HEIGHT - (((uint16_t)(temp_buf[2] & 0B00001111) << 8) | (uint16_t)temp_buf[3]);
 
-        Serial.printf("Touch X: %d Y: %d Event: %#X Fingers: %d\n", touch_x, touch_y, touch_event, fingers_number);
-        *x_array = touch_x;
-        *y_array = touch_y;
+        // if (rotation) {
+         // Map physical to LVGL coordinates (rotation 90° clockwise)
+        int16_t lv_x = touch_y;                  // physical Y → LVGL X
+        int16_t lv_y = (LCD_WIDTH - 1) - touch_x; // flipped physical X → LVGL Y
+        //}
+
+        *x_array = lv_x;
+        *y_array = lv_y;
         return 1;
     }
 

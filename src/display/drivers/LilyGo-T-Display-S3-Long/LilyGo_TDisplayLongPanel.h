@@ -60,9 +60,9 @@ class LilyGo_TDisplayLongPanel : public Display {
 
     void wakeup();
 
-    uint16_t width() override { return TFT_WIDTH; };
+    uint16_t width() override { return TFT_HEIGHT; }; // todo use this in drivers and respact rotation
 
-    uint16_t height() override { return TFT_HEIGHT; };
+    uint16_t height() override { return TFT_WIDTH; };
 
     uint8_t getPoint(int16_t *x_array, int16_t *y_array, uint8_t get_point = 1);
 
@@ -72,7 +72,7 @@ class LilyGo_TDisplayLongPanel : public Display {
 
     void pushColors(uint16_t x, uint16_t y, uint16_t width, uint16_t hight, uint16_t *data);
 
-    bool supportsDirectMode() { return false; }
+    bool supportsDirectMode() { return true; }
 
     void setRotation(uint8_t rotation);
 
@@ -86,7 +86,6 @@ class LilyGo_TDisplayLongPanel : public Display {
     Arduino_DataBus *displayBus = nullptr;
     AXS15231 *display = nullptr;
 
-  private:
     uint8_t currentBrightness = 0;
 
     LilyGo_TDisplayLongPanel_Wakeup_Method _wakeupMethod;

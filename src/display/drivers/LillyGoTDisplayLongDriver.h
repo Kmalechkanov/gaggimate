@@ -7,7 +7,9 @@ class LillyGoTDisplayLongDriver : public Driver {
   public:
     bool isCompatible() override;
     void init() override;
-    void setBrightness(int brightness) override { panel.setBrightness(brightness); };
+    void setBrightness(int brightness) override { panel->setBrightness(brightness); };
+    bool supportsSDCard() override;
+    bool installSDCard() override;
 
     static LillyGoTDisplayLongDriver *getInstance() {
         if (instance == nullptr) {
@@ -18,7 +20,7 @@ class LillyGoTDisplayLongDriver : public Driver {
 
   private:
     static LillyGoTDisplayLongDriver *instance;
-    LilyGo_TDisplayLongPanel panel;
+    LilyGo_TDisplayLongPanel *panel = nullptr;
 
     LillyGoTDisplayLongDriver() {};
 };

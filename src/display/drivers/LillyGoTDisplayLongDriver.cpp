@@ -9,8 +9,9 @@ bool LillyGoTDisplayLongDriver::isCompatible() {
 }
 
 void LillyGoTDisplayLongDriver::init() {
+    panel = new LilyGo_TDisplayLongPanel();
     printf("LillyGoTDisplayLongDriver initialzing\n");
-    if (!panel.begin()) {
+    if (!panel->begin()) {
         for (uint8_t i = 0; i < 20; i++) {
             printf("Error, failed to initialize LillyGoTDisplayLongDriver\n");
             delay(1000);
@@ -19,6 +20,11 @@ void LillyGoTDisplayLongDriver::init() {
     }
     delay(1000);
 
-    beginLvglHelper(panel);
-    panel.setBrightness(16);
+    beginLvglHelper(*panel);
+
+    panel->setBrightness(16);
 }
+
+bool LillyGoTDisplayLongDriver::supportsSDCard() { return false; }
+
+bool LillyGoTDisplayLongDriver::installSDCard() { return panel->installSD(); }

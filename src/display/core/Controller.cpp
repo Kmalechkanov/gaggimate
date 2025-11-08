@@ -50,7 +50,7 @@ void Controller::setup() {
 #ifndef GAGGIMATE_HEADLESS
     ui = new DefaultUI(this, driver, pluginManager);
 #endif
-        pluginManager->registerPlugin(new mDNSPlugin());
+    pluginManager->registerPlugin(new mDNSPlugin());
     if (settings.isBoilerFillActive()) {
         pluginManager->registerPlugin(new BoilerFillPlugin());
     }

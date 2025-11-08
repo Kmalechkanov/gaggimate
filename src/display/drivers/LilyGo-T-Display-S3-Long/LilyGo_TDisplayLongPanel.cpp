@@ -55,19 +55,12 @@ bool LilyGo_TDisplayLongPanel::begin() {
     return true;
 }
 
+
 bool LilyGo_TDisplayLongPanel::installSD() {
-    pinMode(SD_CS, OUTPUT);
-    digitalWrite(SD_CS, HIGH);
-
-    SD_MMC.setPins(SD_SCLK, SD_MOSI, SD_MISO);
-
-    return SD_MMC.begin("/sdcard", true, false);
+    return false;
 }
 
 void LilyGo_TDisplayLongPanel::uninstallSD() {
-    SD_MMC.end();                       // Stop SPI SD communication
-    digitalWrite(SD_CS, LOW);       // Pull CS low to avoid bus conflicts
-    pinMode(SD_CS, INPUT);  
 }
 
 void LilyGo_TDisplayLongPanel::setBrightness(uint8_t level) {
@@ -154,27 +147,20 @@ uint16_t LilyGo_TDisplayLongPanel::getBattVoltage(void) {
 }
 
 void LilyGo_TDisplayLongPanel::pushColors(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t *data) {
-    printf("Panel pushColors\n");    
     if (!(displayBus && display)) {
-        printf("Panel pushColors no display\n");    
         return;
     }
-    printf("Panel pushColors: x=%d y=%d w=%d h=%d\n", x, y, width, height);
 
-    // Clip to display bounds
-    int16_t startX = max((int16_t)0, (int16_t)x);
+     int16_t startX = max((int16_t)0, (int16_t)x);
     int16_t startY = max((int16_t)0, (int16_t)y);
-    int16_t clipW  = min((int16_t)(width  - (startX - x)), (int16_t)(TFT_WIDTH  - startX));
-    int16_t clipH  = min((int16_t)(height - (startY - y)), (int16_t)(TFT_HEIGHT - startY));
+    int16_t clipW  = min((int16_t)(width  - (startX - x)), (int16_t)(TFT_HEIGHT  - startX));
+    int16_t clipH  = min((int16_t)(height - (startY - y)), (int16_t)(TFT_WIDTH - startY));
 
     if (clipW <= 0 || clipH <= 0) {
         printf("Nothing to draw (clipped completely outside screen)\n");
         return;
     }
 
-    printf("Panel clip: startX=%d startY=%d clipW=%d clipH=%d\n", startX, startY, clipW, clipH);
-
-    // Allocate temporary buffer for 90° clockwise rotation
     uint16_t *rotated = (uint16_t*)malloc(clipW * clipH * sizeof(uint16_t));
     if (!rotated) {
         printf("Failed to allocate rotation buffer\n");
@@ -193,8 +179,6 @@ void LilyGo_TDisplayLongPanel::pushColors(uint16_t x, uint16_t y, uint16_t width
     display->draw16bitRGBBitmap(startX, startY, rotated, clipH, clipW);
 
     free(rotated);
-        
-    printf("Panel draw16BitRGB\n");    
 }
 
 void LilyGo_TDisplayLongPanel::setRotation(uint8_t rotation) {
@@ -232,14 +216,8 @@ bool LilyGo_TDisplayLongPanel::initDisplay() {
             TFT_QSPI_D3   // D3
         );
 
-        display = new AXS15231(displayBus, TFT_QSPI_RST, 0 /*_rotation*/, false, TFT_HEIGHT, TFT_WIDTH); 
+        display = new AXS15231(displayBus, TFT_QSPI_RST, 0 /*_rotation*/, false, TFT_WIDTH, TFT_HEIGHT); 
     }
-    
-       //this for constant brigtness
-    // pinMode(TFT_BL, OUTPUT);
-    // digitalWrite(TFT_BL, HIGH);
-
-    //this for brigtness control
     
     
     ledcAttachPin(TFT_BL, 1);
@@ -258,11 +236,7 @@ bool LilyGo_TDisplayLongPanel::initDisplay() {
 
     // this->setBrightness(150);
     // this->setRotation(1);
-
-    display->fillScreen(GREEN);
-
-    // displayBus->writeCommand(CO5300_C_PTLON);
-    // display->fillScreen(BLACK);
+    display->fillScreen(BLACK);
 
     ESP_LOGI("LilyGo_TDisplayLongPanel", "Success");
     return success;
