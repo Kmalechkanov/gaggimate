@@ -30,6 +30,8 @@ class PressureController {
     void setPumpFlowCoeff(float oneBarFlow, float nineBarFlow);
     void setPumpFlowPolyCoeffs(float a, float b, float c, float d);
     float getPumpFlowRate() { return exportPumpFlowRate; };
+    // move _coffeFlowRate before getCoffeeFlowRate due to being called befure instanced.
+    float _coffeeFlowRate = 0.0f;           // Coffee output flow rate (mL/s)
     float getCoffeeFlowRate() { return *_valveStatus == 1 ? _coffeeFlowRate : 0.0f; };
     float getPuckResistance() { return _puckResistance; }
 
@@ -88,7 +90,6 @@ class PressureController {
     float _pumpFlowRate = 0.0f;             // Pump flow rate (ml/s)
     float _pumpVolume = 0.0f;               // Total pump volume (ml)
     float _coffeeOutput = 0.0f;             // Total coffee output (ml)
-    float _coffeeFlowRate = 0.0f;           // Coffee output flow rate (mL/s)
     float _lastFilteredPressure = 0.0f;     // Previous filtered pressure for derivative calculation
     float _filterEstimatorFrequency = 1.0f; // Filter frequency for estimator
     float _pressureFilterEstimator = 0.0f;

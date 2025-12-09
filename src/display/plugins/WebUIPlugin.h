@@ -53,7 +53,7 @@ class WebUIPlugin : public Plugin {
     // Core dump download
     void handleCoreDumpDownload(AsyncWebServerRequest *request);
 
-    GitHubOTA *ota = nullptr;
+    // GitHubOTA *ota = nullptr;
     AsyncWebServer server;
     AsyncWebSocket ws;
     Controller *controller = nullptr;

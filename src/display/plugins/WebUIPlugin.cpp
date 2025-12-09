@@ -47,8 +47,8 @@ void WebUIPlugin::setup(Controller *_controller, PluginManager *_pluginManager) 
     });
     pluginManager->on("controller:wifi:disconnect", [this](Event const &) { stop(); });
     pluginManager->on("controller:ready", [this](Event const &) {
-        ota->setControllerVersion(controller->getSystemInfo().version);
-        ota->init(controller->getClientController()->getClient());
+        // ota->setControllerVersion(controller->getSystemInfo().version);
+        // ota->init(controller->getClientController()->getClient());
     });
     pluginManager->on("controller:autotune:result", [this](Event const &event) { sendAutotuneResult(); });
 
@@ -62,7 +62,7 @@ void WebUIPlugin::setup(Controller *_controller, PluginManager *_pluginManager) 
 void WebUIPlugin::loop() {
     if (updating) {
         pluginManager->trigger("ota:update:start");
-        ota->update(updateComponent != "display", updateComponent != "controller");
+        // ota->update(updateComponent != "display", updateComponent != "controller");
         pluginManager->trigger("ota:update:end");
         updating = false;
     }
@@ -71,10 +71,10 @@ void WebUIPlugin::loop() {
     }
     const long now = millis();
     if ((lastUpdateCheck == 0 || now > lastUpdateCheck + UPDATE_CHECK_INTERVAL)) {
-        ota->checkForUpdates();
-        pluginManager->trigger("ota:update:status", "value", ota->isUpdateAvailable());
+        // ota->checkForUpdates();
+        // pluginManager->trigger("ota:update:status", "value", ota->isUpdateAvailable());
         lastUpdateCheck = now;
-        updateOTAStatus(ota->getCurrentVersion());
+        // updateOTAStatus(ota->getCurrentVersion());
     }
     if (now > lastStatus + STATUS_PERIOD) {
         lastStatus = now;
@@ -339,7 +339,7 @@ void WebUIPlugin::handleOTASettings(uint32_t clientId, JsonDocument &request) {
     if (request["update"].as<bool>()) {
         if (!request["channel"].isNull()) {
             controller->getSettings().setOTAChannel(request["channel"].as<String>() == "latest" ? "latest" : "nightly");
-            ota->setReleaseUrl(RELEASE_URL + (controller->getSettings().getOTAChannel() == "latest" ? "latest" : "tag/nightly"));
+            // ota->setReleaseUrl(RELEASE_URL + (controller->getSettings().getOTAChannel() == "latest" ? "latest" : "tag/nightly"));
             lastUpdateCheck = 0;
         }
     }
@@ -687,53 +687,53 @@ void WebUIPlugin::handleBLEScaleInfo(AsyncWebServerRequest *request) {
 }
 
 void WebUIPlugin::updateOTAStatus(const String &version) {
-    Settings const &settings = controller->getSettings();
-    JsonDocument doc;
-    doc["latestVersion"] = ota->getCurrentVersion();
-    doc["tp"] = "res:ota-settings";
-    doc["displayUpdateAvailable"] = ota->isUpdateAvailable(false);
-    doc["controllerUpdateAvailable"] = ota->isUpdateAvailable(true);
-    doc["displayVersion"] = BUILD_GIT_VERSION;
-    doc["controllerVersion"] = controller->getSystemInfo().version;
-    doc["hardware"] = controller->getSystemInfo().hardware;
-    doc["latestVersion"] = ota->getCurrentVersion();
-    doc["channel"] = settings.getOTAChannel();
-    doc["updating"] = updating;
-    // SPIFFS usage metrics
-    {
-        size_t total = SPIFFS.totalBytes();
-        size_t used = SPIFFS.usedBytes();
-        size_t freeBytes = total > used ? (total - used) : 0;
-        doc["spiffsTotal"] = static_cast<uint32_t>(total);
-        doc["spiffsUsed"] = static_cast<uint32_t>(used);
-        doc["spiffsFree"] = static_cast<uint32_t>(freeBytes);
-        if (total > 0) {
-            // Provide integer percentage to avoid float JSON
-            doc["spiffsUsedPct"] = static_cast<uint8_t>((used * 100) / total);
-        }
-    }
-    if (controller->isSDCard()) {
-        const uint64_t total = SD_MMC.cardSize();
-        const uint64_t used = SD_MMC.usedBytes();
-        const uint64_t freeBytes = total > used ? (total - used) : 0;
-        doc["sdTotal"] = total;
-        doc["ssdUsed"] = used;
-        doc["sdFree"] = freeBytes;
-        if (total > 0) {
-            // Provide integer percentage to avoid float JSON
-            doc["sdUsedPct"] = static_cast<uint8_t>((used * 100) / total);
-        }
-    }
-    ws.textAll(doc.as<String>());
+    // Settings const &settings = controller->getSettings();
+    // JsonDocument doc;
+    // doc["latestVersion"] = ota->getCurrentVersion();
+    // doc["tp"] = "res:ota-settings";
+    // doc["displayUpdateAvailable"] = ota->isUpdateAvailable(false);
+    // doc["controllerUpdateAvailable"] = ota->isUpdateAvailable(true);
+    // doc["displayVersion"] = BUILD_GIT_VERSION;
+    // doc["controllerVersion"] = controller->getSystemInfo().version;
+    // doc["hardware"] = controller->getSystemInfo().hardware;
+    // doc["latestVersion"] = ota->getCurrentVersion();
+    // doc["channel"] = settings.getOTAChannel();
+    // doc["updating"] = updating;
+    // // SPIFFS usage metrics
+    // {
+    //     size_t total = SPIFFS.totalBytes();
+    //     size_t used = SPIFFS.usedBytes();
+    //     size_t freeBytes = total > used ? (total - used) : 0;
+    //     doc["spiffsTotal"] = static_cast<uint32_t>(total);
+    //     doc["spiffsUsed"] = static_cast<uint32_t>(used);
+    //     doc["spiffsFree"] = static_cast<uint32_t>(freeBytes);
+    //     if (total > 0) {
+    //         // Provide integer percentage to avoid float JSON
+    //         doc["spiffsUsedPct"] = static_cast<uint8_t>((used * 100) / total);
+    //     }
+    // }
+    // if (controller->isSDCard()) {
+    //     const uint64_t total = SD_MMC.cardSize();
+    //     const uint64_t used = SD_MMC.usedBytes();
+    //     const uint64_t freeBytes = total > used ? (total - used) : 0;
+    //     doc["sdTotal"] = total;
+    //     doc["ssdUsed"] = used;
+    //     doc["sdFree"] = freeBytes;
+    //     if (total > 0) {
+    //         // Provide integer percentage to avoid float JSON
+    //         doc["sdUsedPct"] = static_cast<uint8_t>((used * 100) / total);
+    //     }
+    // }
+    // ws.textAll(doc.as<String>());
 }
 
 void WebUIPlugin::updateOTAProgress(uint8_t phase, int progress) {
-    JsonDocument doc;
-    doc["tp"] = "evt:ota-progress";
-    doc["phase"] = phase;
-    doc["progress"] = progress;
-    String message = doc.as<String>();
-    ws.textAll(message);
+    // JsonDocument doc;
+    // doc["tp"] = "evt:ota-progress";
+    // doc["phase"] = phase;
+    // doc["progress"] = progress;
+    // String message = doc.as<String>();
+    // ws.textAll(message);
 }
 
 void WebUIPlugin::sendAutotuneResult() {
