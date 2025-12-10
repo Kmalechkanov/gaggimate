@@ -17,7 +17,7 @@ float Max31855Thermocouple::read() { return isErrorState() ? 0.0f : temperature;
 bool Max31855Thermocouple::isErrorState() { return temperature <= 0 || errorCount >= MAX31855_MAX_ERRORS; }
 
 void Max31855Thermocouple::setup() {
-    SPI.begin();
+    SPI.begin(sckPin, misoPin, -1, csPin);
     pinMode(csPin, OUTPUT);
     digitalWrite(csPin, HIGH);
     max31855->begin();
