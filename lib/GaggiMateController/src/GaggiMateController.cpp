@@ -83,6 +83,8 @@ void GaggiMateController::setup() {
         
         heater->setThermalFeedforward(pumpFlowPtr, 23.0f, valveStatusPtr);
         heater->setFeedforwardScale(0.0f);
+
+
     } 
     // Initialize last ping time
     lastPingTime = millis();

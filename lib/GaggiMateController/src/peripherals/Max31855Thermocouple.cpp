@@ -7,9 +7,23 @@ Max31855Thermocouple::Max31855Thermocouple(const int csPin, const int misoPin, c
                                            const temperature_callback_t &callback,
                                            const temperature_error_callback_t &error_callback)
     : taskHandle(nullptr), csPin(csPin), misoPin(misoPin), sckPin(sckPin) {
-    max31855 = new MAX31855(csPin, misoPin, sckPin);
+    // max31855 = new MAX31855(csPin, misoPin, sckPin);
     this->callback = callback;
     this->error_callback = error_callback;
+}
+
+uint32_t Max31855Thermocouple::readMAX() {
+    digitalWrite(csPin, LOW);
+    uint32_t v = spi.transfer32(0);
+    digitalWrite(csPin, HIGH);
+    return v;
+}
+
+float Max31855Thermocouple::parseMAXTemp(uint32_t raw) {
+    if (raw & 0x00010000) return NAN; // error bit
+    int16_t tc = (raw >> 18) & 0x3FFF;
+    if (tc & 0x2000) tc |= 0xC000; // sign extend for negative
+    return tc * 0.25;
 }
 
 float Max31855Thermocouple::read() { return isErrorState() ? 0.0f : temperature; }
@@ -17,11 +31,13 @@ float Max31855Thermocouple::read() { return isErrorState() ? 0.0f : temperature;
 bool Max31855Thermocouple::isErrorState() { return temperature <= 0 || errorCount >= MAX31855_MAX_ERRORS; }
 
 void Max31855Thermocouple::setup() {
-    SPI.begin(sckPin, misoPin, -1, csPin);
+    spi.begin(sckPin, misoPin, -1, csPin);
     pinMode(csPin, OUTPUT);
     digitalWrite(csPin, HIGH);
-    max31855->begin();
-    max31855->setSPIspeed(1000000);
+    delay(500);
+
+    // max31855->begin();
+    // max31855->setSPIspeed(1000000);
 
     xTaskCreate(monitorTask, "Max31855Thermocouple::monitor", configMINIMAL_STACK_SIZE * 4, this, 1, &taskHandle);
 }
@@ -39,13 +55,22 @@ void Max31855Thermocouple::loop() {
         ++resultCount;
     }
 
-    float temp;
-    int status = max31855->read();
-    if (status != STATUS_OK) {
-        ESP_LOGE(LOG_TAG, "Failed to read temperature: %d\n", status);
+    // float temp;
+    // int status = max31855->read();
+    // if (status != STATUS_OK) {
+    //     ESP_LOGE(LOG_TAG, "Failed to read temperature: %d\n", status);
+    //     temp = 0.0f;
+    // } else {
+    //     temp = max31855->getTemperature();
+    // }
+
+    uint32_t raw = readMAX();
+    float temp = parseMAXTemp(raw);
+    if (isnan(temp)) {
+        ESP_LOGE(LOG_TAG, "ERROR reading thermocouple");
         temp = 0.0f;
     } else {
-        temp = max31855->getTemperature();
+        ESP_LOGE(LOG_TAG, "Temp: %.2f C\n", temp);
     }
 
     if (temp <= 0.0f) {
