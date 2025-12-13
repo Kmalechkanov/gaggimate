@@ -34,7 +34,7 @@ import json
 import base64
 from pathlib import Path
 
-def find_pio_build_dir(environment="display"):
+def find_pio_build_dir(environment="display_long"):
     """Find the PlatformIO build directory for the given environment."""
     build_dir = Path(".pio/build") / environment
     if not build_dir.exists():
@@ -234,7 +234,7 @@ def main():
 
 
     # Parse arguments - support both environment and direct ELF file specification
-    environment = "display"  # default
+    environment = "display-long"  # default
     custom_elf_file = None
     
     if len(sys.argv) >= 3:

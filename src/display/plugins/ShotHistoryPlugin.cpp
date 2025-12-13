@@ -1,7 +1,7 @@
 #include "ShotHistoryPlugin.h"
 
 #include <SD_MMC.h>
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include <cmath>
 #include <display/core/Controller.h>
 #include <display/core/ProfileManager.h>

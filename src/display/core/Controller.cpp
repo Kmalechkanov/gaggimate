@@ -2,7 +2,7 @@
 #include "ArduinoJson.h"
 #include "esp_sntp.h"
 #include <SD_MMC.h>
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include <ctime>
 #include <display/config.h>
 #include <display/core/constants.h>
@@ -33,8 +33,8 @@ const String LOG_TAG = F("Controller");
 void Controller::setup() {
     mode = settings.getStartupMode();
 
-    if (!SPIFFS.begin(true)) {
-        Serial.println(F("An Error has occurred while mounting SPIFFS"));
+    if (!LittleFS.begin(true)) {
+        Serial.println(F("An Error has occurred while mounting LittleFs"));
     }
 
 #ifndef GAGGIMATE_HEADLESS
@@ -42,7 +42,7 @@ void Controller::setup() {
 #endif
 
     pluginManager = new PluginManager();
-    FS *fs = &SPIFFS;
+    FS *fs = &LittleFS;
     if (sdcard) {
         fs = &SD_MMC;
     }
