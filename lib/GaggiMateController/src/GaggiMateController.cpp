@@ -39,17 +39,19 @@ void GaggiMateController::setup() {
     this->brewBtn = new DigitalInput(_config.brewButtonPin, [this](const bool state) { _ble.sendBrewBtnState(state); });
     this->steamBtn = new DigitalInput(_config.steamButtonPin, [this](const bool state) { _ble.sendSteamBtnState(state); });
 
-    // 4-Pin peripheral port
-    if (!Wire.begin(_config.sunriseSdaPin, _config.sunriseSclPin, 400000)) {
-        ESP_LOGE(LOG_TAG, "Failed to initialize I2C bus");
-    }
-    this->ledController = new LedController(&Wire);
-    this->distanceSensor = new DistanceSensor(&Wire, [this](int distance) { _ble.sendTofMeasurement(distance); });
-    if (this->ledController->isAvailable()) {
-        _config.capabilites.ledControls = true;
-        _config.capabilites.tof = true;
-        _ble.registerLedControlCallback(
-            [this](uint8_t channel, uint8_t brightness) { ledController->setChannel(channel, brightness); });
+    if (_config.capabilites.ledControls && _config.capabilites.tof) {
+        // 4-Pin peripheral port
+        if (!Wire.begin(_config.sunriseSdaPin, _config.sunriseSclPin, 400000)) {
+            ESP_LOGE(LOG_TAG, "Failed to initialize I2C bus");
+        }
+        this->ledController = new LedController(&Wire);
+        this->distanceSensor = new DistanceSensor(&Wire, [this](int distance) { _ble.sendTofMeasurement(distance); });
+        if (this->ledController->isAvailable()) {
+            _config.capabilites.ledControls = true;
+            _config.capabilites.tof = true;
+            _ble.registerLedControlCallback(
+                [this](uint8_t channel, uint8_t brightness) { ledController->setChannel(channel, brightness); });
+        }
     }
 
     String systemInfo = make_system_info(_config, _version);
@@ -81,7 +83,7 @@ void GaggiMateController::setup() {
         
         heater->setThermalFeedforward(pumpFlowPtr, 23.0f, valveStatusPtr);
         heater->setFeedforwardScale(0.0f);
-        
+
 
     } 
     // Initialize last ping time
@@ -163,12 +165,13 @@ void GaggiMateController::loop() {
 void GaggiMateController::registerBoardConfig(ControllerConfig config) { configs.push_back(config); }
 
 void GaggiMateController::detectBoard() {
-    pinMode(DETECT_EN_PIN, OUTPUT);
-    pinMode(DETECT_VALUE_PIN, INPUT_PULLDOWN);
-    digitalWrite(DETECT_EN_PIN, HIGH);
-    uint16_t millivolts = analogReadMilliVolts(DETECT_VALUE_PIN);
-    digitalWrite(DETECT_EN_PIN, LOW);
-    int boardId = round(((float)millivolts) / 100.0f - 0.5f);
+    // pinMode(DETECT_EN_PIN, OUTPUT);
+    // pinMode(DETECT_VALUE_PIN, INPUT_PULLDOWN);
+    // digitalWrite(DETECT_EN_PIN, HIGH);
+    // uint16_t millivolts = analogReadMilliVolts(DETECT_VALUE_PIN);
+    // digitalWrite(DETECT_EN_PIN, LOW);
+    // int boardId = round(((float)millivolts) / 100.0f - 0.5f);
+    int boardId = 3;
     ESP_LOGI(LOG_TAG, "Detected Board ID: %d", boardId);
     for (ControllerConfig config : configs) {
         if (config.autodetectValue == boardId) {

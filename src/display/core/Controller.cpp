@@ -15,7 +15,6 @@
 #include <display/plugins/AutoWakeupPlugin.h>
 #include <display/plugins/BLEScalePlugin.h>
 #include <display/plugins/BoilerFillPlugin.h>
-#include <display/plugins/HomekitPlugin.h>
 #include <display/plugins/LedControlPlugin.h>
 #include <display/plugins/MQTTPlugin.h>
 #include <display/plugins/ShotHistoryPlugin.h>
@@ -25,6 +24,7 @@
 #ifndef GAGGIMATE_HEADLESS
 #include <display/drivers/AmoledDisplayDriver.h>
 #include <display/drivers/LilyGoDriver.h>
+#include <display/drivers/LillyGoTDisplayLongDriver.h>
 #include <display/drivers/WaveshareDriver.h>
 #endif
 
@@ -51,10 +51,7 @@ void Controller::setup() {
 #ifndef GAGGIMATE_HEADLESS
     ui = new DefaultUI(this, driver, pluginManager);
 #endif
-    if (settings.isHomekit())
-        pluginManager->registerPlugin(new HomekitPlugin(settings.getWifiSsid(), settings.getWifiPassword()));
-    else
-        pluginManager->registerPlugin(new mDNSPlugin());
+    pluginManager->registerPlugin(new mDNSPlugin());
     if (settings.isBoilerFillActive()) {
         pluginManager->registerPlugin(new BoilerFillPlugin());
     }
@@ -113,7 +110,9 @@ void Controller::connect() {
 
 #ifndef GAGGIMATE_HEADLESS
 void Controller::setupPanel() {
-    if (AmoledDisplayDriver::getInstance()->isCompatible()) {
+    if (LillyGoTDisplayLongDriver::getInstance()->isCompatible()) {
+        driver = LillyGoTDisplayLongDriver::getInstance();
+    } else if (AmoledDisplayDriver::getInstance()->isCompatible()) {
         driver = AmoledDisplayDriver::getInstance();
     } else if (LilyGoDriver::getInstance()->isCompatible()) {
         driver = LilyGoDriver::getInstance();
