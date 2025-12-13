@@ -3,7 +3,7 @@
 #define SETTINGS_H
 
 #include <Arduino.h>
-#include <Preferences.h>
+#include "FilePreferences.cpp"
 #include <display/core/constants.h>
 #include <display/core/utils.h>
 #include <vector>
@@ -49,6 +49,7 @@ using SettingsCallback = std::function<void(Settings *)>;
 class Settings {
   public:
     Settings();
+    void setup();
 
     void batchUpdate(const SettingsCallback &callback);
     void save(bool noDelay = false);
@@ -184,7 +185,7 @@ class Settings {
     void setAutoWakeupSchedules(const std::vector<AutoWakeupSchedule> &schedules);
 
   private:
-    Preferences preferences;
+    FilePreferences preferences;
     bool dirty = false;
 
     String selectedProfile;

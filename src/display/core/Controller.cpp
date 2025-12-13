@@ -33,9 +33,25 @@ const String LOG_TAG = F("Controller");
 void Controller::setup() {
     mode = settings.getStartupMode();
 
-    if (!LittleFS.begin(true)) {
-        Serial.println(F("An Error has occurred while mounting LittleFs"));
+    if (!LittleFS.begin(false)) {
+        ESP_LOGI(LOG_TAG, "LittleFS mount failed, formatting...");
+        if (!LittleFS.format()) {
+            ESP_LOGI(LOG_TAG, "LittleFS FORMAT FAILED (fatal)");
+            while (true) {
+                delay(1000);
+            }
+        }
+        if (!LittleFS.begin(false)) {
+            ESP_LOGI(LOG_TAG, "LittleFS mount failed after format (fatal)");
+            while (true) {
+                delay(1000);
+            }
+        }
     }
+    ESP_LOGI(LOG_TAG, "LittleFS mounted successfully");
+
+    settings.setup();
+    delay(1000);
 
 #ifndef GAGGIMATE_HEADLESS
     setupPanel();
