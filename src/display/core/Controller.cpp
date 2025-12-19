@@ -51,7 +51,6 @@ void Controller::setup() {
     ESP_LOGI(LOG_TAG, "LittleFS mounted successfully");
 
     settings.setup();
-    delay(1000);
 
 #ifndef GAGGIMATE_HEADLESS
     setupPanel();
@@ -81,7 +80,7 @@ void Controller::setup() {
     pluginManager->registerPlugin(&ShotHistory);
     pluginManager->registerPlugin(&BLEScales);
     pluginManager->registerPlugin(new LedControlPlugin());
-    pluginManager->registerPlugin(new AutoWakeupPlugin());
+    // pluginManager->registerPlugin(new AutoWakeupPlugin());
     pluginManager->setup(this);
 
     pluginManager->on("profiles:profile:save", [this](Event const &event) {

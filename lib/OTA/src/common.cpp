@@ -93,8 +93,13 @@ void print_update_result(Updater updater, HTTPUpdateResult result, const char *T
 }
 
 bool update_required(semver_t _new_version, semver_t _current_version) {
-    ESP_LOGI("update_required", "Comparing versions %s > %s", render_to_string(_new_version).c_str(),
-             render_to_string(_current_version).c_str());
+    try {
+        ESP_LOGI("update_required", "Comparing versions %s > %s", render_to_string(_new_version).c_str(),
+                 render_to_string(_current_version).c_str());
+    } catch (const std::length_error &e) {
+        ESP_LOGE("update_required", "Caught length_error in render_to_string");
+    }
+
     return _new_version > _current_version;
 }
 

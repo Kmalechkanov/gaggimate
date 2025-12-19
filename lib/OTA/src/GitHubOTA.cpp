@@ -44,11 +44,26 @@ void GitHubOTA::checkForUpdates() {
     const char *TAG = "checkForUpdates";
 
     _latest_url = get_updated_base_url_via_redirect(_wifi_client, _release_url);
+
+    if (_latest_url.endsWith("/releases/")) {
+        ESP_LOGW(TAG, "No releases found at %s", _latest_url.c_str());
+        return; // safely exit, nothing to update
+    }
+
+    if (_latest_url.length() > 512) { // sanity limit
+        ESP_LOGW(TAG, "URL too long, skipping update");
+        return;
+    }
+
     if (_latest_url != "") {
         ESP_LOGI(TAG, "base_url %s\n", _latest_url.c_str());
 
         auto last_slash = _latest_url.lastIndexOf('/', _latest_url.length() - 2);
         auto semver_str = _latest_url.substring(last_slash + 2);
+        if (semver_str.length() > 64) { // sanity limit
+            ESP_LOGW(TAG, "semver_str too long, skipping");
+            return;
+        }
         semver_str.replace("/", "");
         ESP_LOGI(TAG, "semver_str %s\n", semver_str.c_str());
         _latest_version_string = semver_str;
@@ -57,6 +72,10 @@ void GitHubOTA::checkForUpdates() {
         _latest_url = _release_url + "/";
         _latest_url.replace("tag", "download");
         String version = get_updated_version_via_txt_file(_wifi_client, _latest_url);
+        if (version.length() > 64) {
+            ESP_LOGW(TAG, "version string too long, skipping");
+            return;
+        }
         version = version.substring(1);
         _latest_version_string = version;
         _latest_version = from_string(version.c_str());

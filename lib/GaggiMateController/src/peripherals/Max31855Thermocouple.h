@@ -29,7 +29,6 @@ class Max31855Thermocouple : public TemperatureSensor {
     float parseMAXTemp(uint32_t raw);
 
   private:
-    // MAX31855 *max31855;
     SPIClass spi;
     xTaskHandle taskHandle;
 

@@ -72,8 +72,7 @@ static void disp_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_
     
     uint16_t width  = area->x2 - area->x1 + 1;
     uint16_t height = area->y2 - area->y1 + 1;
-    static_cast<Display *>(disp_drv->user_data)
-        ->pushColors(area->x1, area->y1, width, height, (uint16_t *)color_p);
+    disp->pushColors(area->x1, area->y1, width, height, (uint16_t *)color_p);
     lv_disp_flush_ready(disp_drv);
 }
 

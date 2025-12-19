@@ -39,6 +39,12 @@ LilyGo_TDisplayLongPanel::~LilyGo_TDisplayLongPanel() {
 }
 
 bool LilyGo_TDisplayLongPanel::begin() {
+    bufferSize = TFT_WIDTH * TFT_HEIGHT;  // max possible size
+    buffer = (uint16_t*)ps_malloc(bufferSize * sizeof(uint16_t));
+    if (!buffer) {
+        Serial.println("Failed to allocate rotated buffer");
+    }
+
     bool displayOK = initDisplay();
     if (!displayOK) {
         log_e("Display initialization failed!");
@@ -151,7 +157,7 @@ void LilyGo_TDisplayLongPanel::pushColors(uint16_t x, uint16_t y, uint16_t width
         return;
     }
 
-     int16_t startX = max((int16_t)0, (int16_t)x);
+    int16_t startX = max((int16_t)0, (int16_t)x);
     int16_t startY = max((int16_t)0, (int16_t)y);
     int16_t clipW  = min((int16_t)(width  - (startX - x)), (int16_t)(TFT_HEIGHT  - startX));
     int16_t clipH  = min((int16_t)(height - (startY - y)), (int16_t)(TFT_WIDTH - startY));
@@ -161,24 +167,16 @@ void LilyGo_TDisplayLongPanel::pushColors(uint16_t x, uint16_t y, uint16_t width
         return;
     }
 
-    uint16_t *rotated = (uint16_t*)malloc(clipW * clipH * sizeof(uint16_t));
-    if (!rotated) {
-        printf("Failed to allocate rotation buffer\n");
-        return;
-    }
-
     // Rotate 90° clockwise: data[y*width + x] -> rotated[x*clipH + (clipH - y - 1)]
     for (int16_t row = 0; row < clipH; row++) {
         for (int16_t col = 0; col < clipW; col++) {
-            rotated[col * clipH + (clipH - row - 1)] = 
+            buffer[col * clipH + (clipH - row - 1)] = 
                 data[(row + (startY - y)) * width + (col + (startX - x))];
         }
     }
 
     // Draw rotated bitmap (width and height swapped)
-    display->draw16bitRGBBitmap(startX, startY, rotated, clipH, clipW);
-
-    free(rotated);
+    display->draw16bitRGBBitmap(startX, startY, buffer, clipH, clipW);
 }
 
 void LilyGo_TDisplayLongPanel::setRotation(uint8_t rotation) {
@@ -235,7 +233,6 @@ bool LilyGo_TDisplayLongPanel::initDisplay() {
     }
 
     // this->setBrightness(150);
-    // this->setRotation(1);
     display->fillScreen(BLACK);
 
     ESP_LOGI("LilyGo_TDisplayLongPanel", "Success");

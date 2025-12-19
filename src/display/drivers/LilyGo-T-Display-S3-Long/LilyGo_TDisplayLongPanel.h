@@ -90,4 +90,7 @@ class LilyGo_TDisplayLongPanel : public Display {
 
     LilyGo_TDisplayLongPanel_Wakeup_Method _wakeupMethod;
     uint64_t _sleepTimeUs;
+
+    uint16_t *buffer = nullptr;
+    size_t bufferSize = 0;
 };
