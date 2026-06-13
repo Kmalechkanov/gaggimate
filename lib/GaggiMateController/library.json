@@ -13,7 +13,7 @@
   "platforms": ["esp32"],
   "dependencies": {
     "FS": "*",
-    "SPIFFS": "*",
+    "LittleFS": "*",
     "ble_ota_dfu": "file://lib/ble_ota_dfu",
     "NimBLEComm": "file://lib/NimBLEComm",
     "h2zero/NimBLE-Arduino": "^1.4.0",

@@ -13,10 +13,10 @@ extern "C" {
 // SCREEN: ui_InitScreen
 extern void ui_InitScreen_screen_init(void);
 extern void ui_InitScreen_screen_destroy(void);
-extern void ui_event_InitScreen(lv_event_t *e);
-extern lv_obj_t *ui_InitScreen;
-extern lv_obj_t *ui_InitScreen_Image2;
-extern lv_obj_t *ui_InitScreen_mainLabel;
+extern void ui_event_InitScreen(lv_event_t * e);
+extern lv_obj_t * ui_InitScreen;
+extern lv_obj_t * ui_InitScreen_Image2;
+extern lv_obj_t * ui_InitScreen_mainLabel;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus
@@ -24,3 +24,4 @@ extern lv_obj_t *ui_InitScreen_mainLabel;
 #endif
 
 #endif
+

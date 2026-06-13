@@ -1,0 +1,10 @@
+{
+  "name": "Arduino DriveBus",
+  "version": "1.0.1",
+  "author": "Xk_w",
+  "maintainer": "Xk_w",
+  "description": "A comprehensive Arduino library providing bus driving functions, including I2C and SPI protocols. Currently supports I2C and IIS.",
+  "homepage": "https://github.com/Xk-w/Arduino_DriveBus",
+  "frameworks": "arduino",
+  "platforms": "*"
+}

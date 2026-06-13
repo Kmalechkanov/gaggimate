@@ -72,7 +72,8 @@ When building the firmware, the scripts/build_spiffs.sh script installs the web 
 3. **Build the project** to verify your environment:
     - `platformio run -e display` and `platformio run -e controller` compile the firmware.
     - `./scripts/builds_spiffs.sh` builds the web assets.
-4. **Upload the Web UI** by running `platformio run -e display -t uploadfs`
+4. **Erase flash just in case** `python -m esptool --chip esp32-s3 erase_flash`
+5. **Upload the Web UI** by running `platformio run -e display -t uploadfs`
 
 ## Code Style
 

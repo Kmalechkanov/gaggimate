@@ -24,3 +24,7 @@ void CO5300::setRotation(uint8_t r) {
     _bus->writeC8D8(CO5300_W_MADCTL, r);
     _bus->endWrite();
 }
+
+void CO5300::setBrightness(int t) {
+    // because im using another Arduino_GFX_Library and this function is missing
+}

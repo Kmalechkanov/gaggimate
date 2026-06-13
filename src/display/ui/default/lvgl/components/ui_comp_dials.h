@@ -14,16 +14,12 @@ extern "C" {
 
 // COMPONENT dials
 #define UI_COMP_DIALS_DIALS 0
-#define UI_COMP_DIALS_TEMPGAUGE 1
-#define UI_COMP_DIALS_TEMPTARGET 2
-#define UI_COMP_DIALS_PRESSUREGAUGE 3
-#define UI_COMP_DIALS_PRESSURETARGET 4
-#define UI_COMP_DIALS_PRESSURETEXT 5
-#define UI_COMP_DIALS_TEMPTEXT 6
-#define UI_COMP_DIALS_TEMPICON 7
-#define UI_COMP_DIALS_IMAGE6 8
-#define _UI_COMP_DIALS_NUM 9
-lv_obj_t *ui_dials_create(lv_obj_t *comp_parent);
+#define UI_COMP_DIALS_PRESSURETEXT 1
+#define UI_COMP_DIALS_TEMPTEXT 2
+#define UI_COMP_DIALS_TEMPICON 3
+#define UI_COMP_DIALS_IMAGE6 4
+#define _UI_COMP_DIALS_NUM 5
+lv_obj_t * ui_dials_create(lv_obj_t * comp_parent);
 
 #ifdef __cplusplus
 } /*extern "C"*/

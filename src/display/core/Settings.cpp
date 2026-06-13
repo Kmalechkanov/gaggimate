@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <utility>
 
-Settings::Settings() {
-    preferences.begin(PREFERENCES_KEY, true);
+Settings::Settings() {}
+
+void Settings::setup() {
+    preferences.begin();
     startupMode = preferences.getInt("sm", MODE_STANDBY);
     targetBrewTemp = preferences.getInt("tb", 90);
     targetSteamTemp = preferences.getInt("ts", 145);
@@ -110,7 +112,7 @@ Settings::Settings() {
     sunriseExtBrightness = preferences.getInt("sr_exb", 255);
     emptyTankDistance = preferences.getInt("sr_ed", 200);
     fullTankDistance = preferences.getInt("sr_fd", 50);
-    altRelayFunction = preferences.getInt("alt_relay", ALT_RELAY_GRIND);
+    altRelayFunction = preferences.getInt("alt_relay", ALT_RELAY_NONE);
 
     preferences.end();
 
@@ -466,7 +468,6 @@ void Settings::doSave() {
     }
     dirty = false;
     ESP_LOGI("Settings", "Saving settings");
-    preferences.begin(PREFERENCES_KEY, false);
     preferences.putInt("sm", startupMode);
     preferences.putInt("tb", targetBrewTemp);
     preferences.putInt("ts", targetSteamTemp);

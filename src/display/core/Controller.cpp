@@ -2,7 +2,7 @@
 #include "ArduinoJson.h"
 #include "esp_sntp.h"
 #include <SD_MMC.h>
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include <ctime>
 #include <display/config.h>
 #include <display/core/constants.h>
@@ -15,7 +15,6 @@
 #include <display/plugins/AutoWakeupPlugin.h>
 #include <display/plugins/BLEScalePlugin.h>
 #include <display/plugins/BoilerFillPlugin.h>
-#include <display/plugins/HomekitPlugin.h>
 #include <display/plugins/LedControlPlugin.h>
 #include <display/plugins/MQTTPlugin.h>
 #include <display/plugins/ShotHistoryPlugin.h>
@@ -25,6 +24,7 @@
 #ifndef GAGGIMATE_HEADLESS
 #include <display/drivers/AmoledDisplayDriver.h>
 #include <display/drivers/LilyGoDriver.h>
+#include <display/drivers/LillyGoTDisplayLongDriver.h>
 #include <display/drivers/WaveshareDriver.h>
 #endif
 
@@ -33,16 +33,31 @@ const String LOG_TAG = F("Controller");
 void Controller::setup() {
     mode = settings.getStartupMode();
 
-    if (!SPIFFS.begin(true)) {
-        Serial.println(F("An Error has occurred while mounting SPIFFS"));
+    if (!LittleFS.begin(false)) {
+        ESP_LOGI(LOG_TAG, "LittleFS mount failed, formatting...");
+        if (!LittleFS.format()) {
+            ESP_LOGI(LOG_TAG, "LittleFS FORMAT FAILED (fatal)");
+            while (true) {
+                delay(1000);
+            }
+        }
+        if (!LittleFS.begin(false)) {
+            ESP_LOGI(LOG_TAG, "LittleFS mount failed after format (fatal)");
+            while (true) {
+                delay(1000);
+            }
+        }
     }
+    ESP_LOGI(LOG_TAG, "LittleFS mounted successfully");
+
+    settings.setup();
 
 #ifndef GAGGIMATE_HEADLESS
     setupPanel();
 #endif
 
     pluginManager = new PluginManager();
-    FS *fs = &SPIFFS;
+    FS *fs = &LittleFS;
     if (sdcard) {
         fs = &SD_MMC;
     }
@@ -51,10 +66,7 @@ void Controller::setup() {
 #ifndef GAGGIMATE_HEADLESS
     ui = new DefaultUI(this, driver, pluginManager);
 #endif
-    if (settings.isHomekit())
-        pluginManager->registerPlugin(new HomekitPlugin(settings.getWifiSsid(), settings.getWifiPassword()));
-    else
-        pluginManager->registerPlugin(new mDNSPlugin());
+    pluginManager->registerPlugin(new mDNSPlugin());
     if (settings.isBoilerFillActive()) {
         pluginManager->registerPlugin(new BoilerFillPlugin());
     }
@@ -68,7 +80,7 @@ void Controller::setup() {
     pluginManager->registerPlugin(&ShotHistory);
     pluginManager->registerPlugin(&BLEScales);
     pluginManager->registerPlugin(new LedControlPlugin());
-    pluginManager->registerPlugin(new AutoWakeupPlugin());
+    // pluginManager->registerPlugin(new AutoWakeupPlugin());
     pluginManager->setup(this);
 
     pluginManager->on("profiles:profile:save", [this](Event const &event) {
@@ -113,7 +125,9 @@ void Controller::connect() {
 
 #ifndef GAGGIMATE_HEADLESS
 void Controller::setupPanel() {
-    if (AmoledDisplayDriver::getInstance()->isCompatible()) {
+    if (LillyGoTDisplayLongDriver::getInstance()->isCompatible()) {
+        driver = LillyGoTDisplayLongDriver::getInstance();
+    } else if (AmoledDisplayDriver::getInstance()->isCompatible()) {
         driver = AmoledDisplayDriver::getInstance();
     } else if (LilyGoDriver::getInstance()->isCompatible()) {
         driver = LilyGoDriver::getInstance();
