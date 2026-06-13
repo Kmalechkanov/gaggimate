@@ -1,5 +1,9 @@
 #include "DefaultUI.h"
 
+#include <cstdarg>
+#include <cstdio>
+#include <cstring>
+
 #include <WiFi.h>
 #include <display/config.h>
 #include <display/core/Controller.h>
@@ -17,6 +21,68 @@
 #include "esp_sntp.h"
 
 static EffectManager effect_mgr;
+
+namespace {
+
+void setLabelTextIfChanged(lv_obj_t *label, const char *text) {
+    const char *current = lv_label_get_text(label);
+    if (current == nullptr || std::strcmp(current, text) != 0) {
+        lv_label_set_text(label, text);
+    }
+}
+
+void setLabelTextFmtIfChanged(lv_obj_t *label, const char *format, ...) {
+    char text[96];
+    va_list args;
+    va_start(args, format);
+    std::vsnprintf(text, sizeof(text), format, args);
+    va_end(args);
+    setLabelTextIfChanged(label, text);
+}
+
+void setBarValueIfChanged(lv_obj_t *bar, int32_t value, lv_anim_enable_t anim) {
+    if (lv_bar_get_value(bar) != value) {
+        lv_bar_set_value(bar, value, anim);
+    }
+}
+
+void setBarRangeIfChanged(lv_obj_t *bar, int32_t min, int32_t max) {
+    if (lv_bar_get_min_value(bar) != min || lv_bar_get_max_value(bar) != max) {
+        lv_bar_set_range(bar, min, max);
+    }
+}
+
+void setImageSrcIfChanged(lv_obj_t *image, const void *src) {
+    if (lv_img_get_src(image) != src) {
+        lv_img_set_src(image, src);
+    }
+}
+
+void addFlagIfMissing(lv_obj_t *obj, lv_obj_flag_t flag) {
+    if (!lv_obj_has_flag(obj, flag)) {
+        lv_obj_add_flag(obj, flag);
+    }
+}
+
+void clearFlagIfSet(lv_obj_t *obj, lv_obj_flag_t flag) {
+    if (lv_obj_has_flag(obj, flag)) {
+        lv_obj_clear_flag(obj, flag);
+    }
+}
+
+void setImageRecolorIfChanged(lv_obj_t *obj, lv_color_t color, lv_style_selector_t selector) {
+    if (lv_obj_get_style_img_recolor(obj, selector).full != color.full) {
+        lv_obj_set_style_img_recolor(obj, color, selector);
+    }
+}
+
+void setOpacityIfChanged(lv_obj_t *obj, lv_opa_t opacity, lv_style_selector_t selector) {
+    if (lv_obj_get_style_opa(obj, selector) != opacity) {
+        lv_obj_set_style_opa(obj, opacity, selector);
+    }
+}
+
+} // namespace
 
 int16_t calculate_angle(int set_temp, int range, int offset) {
     const double percentage = static_cast<double>(set_temp) / static_cast<double>(MAX_TEMP);
@@ -66,10 +132,10 @@ void DefaultUI::updateTempStableFlag() {
 
 void DefaultUI::adjustHeatingIndicator(lv_obj_t *dials) {
     lv_obj_t *heatingIcon = ui_comp_get_child(dials, UI_COMP_DIALS_TEMPICON);
-    lv_obj_set_style_img_recolor(heatingIcon, lv_color_hex(isTemperatureStable ? 0x00D100 : 0xF62C2C),
+    setImageRecolorIfChanged(heatingIcon, lv_color_hex(isTemperatureStable ? 0x00D100 : 0xF62C2C),
                                  LV_PART_MAIN | LV_STATE_DEFAULT);
     if (!isTemperatureStable) {
-        lv_obj_set_style_opa(heatingIcon, heatingFlash ? LV_OPA_50 : LV_OPA_100, LV_PART_MAIN | LV_STATE_DEFAULT);
+        setOpacityIfChanged(heatingIcon, heatingFlash ? LV_OPA_50 : LV_OPA_100, LV_PART_MAIN | LV_STATE_DEFAULT);
     }
 }
 
@@ -359,55 +425,55 @@ void DefaultUI::setupReactive() {
     effect_mgr.use_effect([=] { return currentScreen == ui_StatusScreen; },
                           [=]() { adjustHeatingIndicator(ui_StatusScreen_dials); }, &isTemperatureStable, &heatingFlash);
     effect_mgr.use_effect([=] { return currentScreen == ui_SimpleProcessScreen; },
-                          [=]() { lv_label_set_text(ui_SimpleProcessScreen_mainLabel5, mode == MODE_STEAM ? "Steam" : "Water"); },
+                          [=]() { setLabelTextIfChanged(ui_SimpleProcessScreen_mainLabel5, mode == MODE_STEAM ? "Steam" : "Water"); },
                           &mode);
     effect_mgr.use_effect([=] { return currentScreen == ui_MenuScreen; },
                           [=]() {
                             //   lv_arc_set_value(uic_MenuScreen_dials_tempGauge, currentTemp);
-                              lv_label_set_text_fmt(uic_MenuScreen_dials_tempText, "%d°C", currentTemp);
+                              setLabelTextFmtIfChanged(uic_MenuScreen_dials_tempText, "%d°C", currentTemp);
                           },
                           &currentTemp);
     effect_mgr.use_effect([=] { return currentScreen == ui_StatusScreen; },
                           [=]() {
                             //   lv_arc_set_value(uic_StatusScreen_dials_tempGauge, currentTemp);
-                              lv_label_set_text_fmt(uic_StatusScreen_dials_tempText, "%d°C", currentTemp);
+                              setLabelTextFmtIfChanged(uic_StatusScreen_dials_tempText, "%d°C", currentTemp);
                           },
                           &currentTemp);
     effect_mgr.use_effect([=] { return currentScreen == ui_BrewScreen; },
                           [=]() {
                             //   lv_arc_set_value(uic_BrewScreen_dials_tempGauge, currentTemp);
-                              lv_label_set_text_fmt(uic_BrewScreen_dials_tempText, "%d°C", currentTemp);
+                              setLabelTextFmtIfChanged(uic_BrewScreen_dials_tempText, "%d°C", currentTemp);
                           },
                           &currentTemp);
     effect_mgr.use_effect([=] { return currentScreen == ui_GrindScreen; },
                           [=]() {
                             //   lv_arc_set_value(uic_GrindScreen_dials_tempGauge, currentTemp);
-                              lv_label_set_text_fmt(uic_GrindScreen_dials_tempText, "%d°C", currentTemp);
+                              setLabelTextFmtIfChanged(uic_GrindScreen_dials_tempText, "%d°C", currentTemp);
                           },
                           &currentTemp);
     effect_mgr.use_effect([=] { return currentScreen == ui_SimpleProcessScreen; },
                           [=]() {
                             //   lv_arc_set_value(uic_SimpleProcessScreen_dials_tempGauge, currentTemp);
-                              lv_label_set_text_fmt(uic_SimpleProcessScreen_dials_tempText, "%d°C", currentTemp);
+                              setLabelTextFmtIfChanged(uic_SimpleProcessScreen_dials_tempText, "%d°C", currentTemp);
                           },
                           &currentTemp);
     effect_mgr.use_effect([=] { return currentScreen == ui_ProfileScreen; },
                           [=]() {
                             //   lv_arc_set_value(uic_ProfileScreen_dials_tempGauge, currentTemp);
-                              lv_label_set_text_fmt(uic_ProfileScreen_dials_tempText, "%d°C", currentTemp);
+                              setLabelTextFmtIfChanged(uic_ProfileScreen_dials_tempText, "%d°C", currentTemp);
                           },
                           &currentTemp);
     effect_mgr.use_effect([=] { return currentScreen == ui_MenuScreen; }, [=]() { adjustTempTarget(ui_MenuScreen_dials); },
                           &targetTemp);
     effect_mgr.use_effect([=] { return currentScreen == ui_StatusScreen; },
                           [=]() {
-                              lv_label_set_text_fmt(ui_StatusScreen_targetTemp, "%d°C", targetTemp);
+                              setLabelTextFmtIfChanged(ui_StatusScreen_targetTemp, "%d°C", targetTemp);
                               adjustTempTarget(ui_StatusScreen_dials);
                           },
                           &targetTemp);
     effect_mgr.use_effect([=] { return currentScreen == ui_BrewScreen; },
                           [=]() {
-                              lv_label_set_text_fmt(ui_BrewScreen_targetTemp, "%d°C", targetTemp);
+                              setLabelTextFmtIfChanged(ui_BrewScreen_targetTemp, "%d°C", targetTemp);
                               adjustTempTarget(ui_BrewScreen_dials);
                           },
                           &targetTemp);
@@ -415,7 +481,7 @@ void DefaultUI::setupReactive() {
                           &targetTemp);
     effect_mgr.use_effect([=] { return currentScreen == ui_SimpleProcessScreen; },
                           [=]() {
-                              lv_label_set_text_fmt(ui_SimpleProcessScreen_targetTemp, "%d°C", targetTemp);
+                              setLabelTextFmtIfChanged(ui_SimpleProcessScreen_targetTemp, "%d°C", targetTemp);
                               adjustTempTarget(ui_SimpleProcessScreen_dials);
                           },
                           &targetTemp);
@@ -424,86 +490,86 @@ void DefaultUI::setupReactive() {
     effect_mgr.use_effect([=] { return currentScreen == ui_MenuScreen; },
                           [=]() {
                             //   lv_arc_set_value(uic_MenuScreen_dials_pressureGauge, pressure * 10.0f);
-                              lv_label_set_text_fmt(uic_MenuScreen_dials_pressureText, "%.1f bar", pressure);
+                              setLabelTextFmtIfChanged(uic_MenuScreen_dials_pressureText, "%.1f bar", pressure);
                           },
                           &pressure);
     effect_mgr.use_effect([=] { return currentScreen == ui_StatusScreen; },
                           [=]() {
                             //   lv_arc_set_value(uic_StatusScreen_dials_pressureGauge, pressure * 10.0f);
-                              lv_label_set_text_fmt(uic_StatusScreen_dials_pressureText, "%.1f bar", pressure);
+                              setLabelTextFmtIfChanged(uic_StatusScreen_dials_pressureText, "%.1f bar", pressure);
                           },
                           &pressure);
     effect_mgr.use_effect([=] { return currentScreen == ui_BrewScreen; },
                           [=]() {
                             //   lv_arc_set_value(uic_BrewScreen_dials_pressureGauge, pressure * 10.0f);
-                              lv_label_set_text_fmt(uic_BrewScreen_dials_pressureText, "%.1f bar", pressure);
+                              setLabelTextFmtIfChanged(uic_BrewScreen_dials_pressureText, "%.1f bar", pressure);
                           },
                           &pressure);
     effect_mgr.use_effect([=] { return currentScreen == ui_GrindScreen; },
                           [=]() {
                             //   lv_arc_set_value(uic_GrindScreen_dials_pressureGauge, pressure * 10.0f);
-                              lv_label_set_text_fmt(uic_GrindScreen_dials_pressureText, "%.1f bar", pressure);
+                              setLabelTextFmtIfChanged(uic_GrindScreen_dials_pressureText, "%.1f bar", pressure);
                           },
                           &pressure);
     effect_mgr.use_effect([=] { return currentScreen == ui_SimpleProcessScreen; },
                           [=]() {
                             //   lv_arc_set_value(uic_SimpleProcessScreen_dials_pressureGauge, pressure * 10.0f);
-                              lv_label_set_text_fmt(uic_SimpleProcessScreen_dials_pressureText, "%.1f bar", pressure);
+                              setLabelTextFmtIfChanged(uic_SimpleProcessScreen_dials_pressureText, "%.1f bar", pressure);
                           },
                           &pressure);
     effect_mgr.use_effect([=] { return currentScreen == ui_ProfileScreen; },
                           [=]() {
                             //   lv_arc_set_value(uic_ProfileScreen_dials_pressureGauge, pressure * 10.0f);
-                              lv_label_set_text_fmt(uic_ProfileScreen_dials_pressureText, "%.1f bar", pressure);
+                              setLabelTextFmtIfChanged(uic_ProfileScreen_dials_pressureText, "%.1f bar", pressure);
                           },
                           &pressure);
     effect_mgr.use_effect([=] { return currentScreen == ui_StandbyScreen; },
                           [=]() {
-                              updateAvailable ? lv_obj_clear_flag(ui_StandbyScreen_updateIcon, LV_OBJ_FLAG_HIDDEN)
-                                              : lv_obj_add_flag(ui_StandbyScreen_updateIcon, LV_OBJ_FLAG_HIDDEN);
+                              updateAvailable ? clearFlagIfSet(ui_StandbyScreen_updateIcon, LV_OBJ_FLAG_HIDDEN)
+                                              : addFlagIfMissing(ui_StandbyScreen_updateIcon, LV_OBJ_FLAG_HIDDEN);
                           },
                           &updateAvailable);
     effect_mgr.use_effect([=] { return currentScreen == ui_InitScreen; },
                           [=]() {
                               if (updateActive) {
-                                  lv_label_set_text_fmt(ui_InitScreen_mainLabel, "Updating...");
+                                  setLabelTextFmtIfChanged(ui_InitScreen_mainLabel, "Updating...");
                               } else if (error) {
                                   if (controller->getError() == ERROR_CODE_RUNAWAY) {
-                                      lv_label_set_text_fmt(ui_InitScreen_mainLabel, "Temperature error, please restart");
+                                      setLabelTextFmtIfChanged(ui_InitScreen_mainLabel, "Temperature error, please restart");
                                   }
                               } else if (autotuning) {
-                                  lv_label_set_text_fmt(ui_InitScreen_mainLabel, "Autotuning...");
+                                  setLabelTextFmtIfChanged(ui_InitScreen_mainLabel, "Autotuning...");
                               }
                           },
                           &updateAvailable, &error, &autotuning);
     effect_mgr.use_effect([=] { return currentScreen == ui_BrewScreen; },
                           [=]() {
                               if (volumetricMode) {
-                                  lv_label_set_text_fmt(ui_BrewScreen_targetDuration, "%.1fg", targetVolume);
+                                  setLabelTextFmtIfChanged(ui_BrewScreen_targetDuration, "%.1fg", targetVolume);
                               } else {
                                   const double secondsDouble = targetDuration;
                                   const auto minutes = static_cast<int>(secondsDouble / 60.0);
                                   const auto seconds = static_cast<int>(secondsDouble) % 60;
-                                  lv_label_set_text_fmt(ui_BrewScreen_targetDuration, "%2d:%02d", minutes, seconds);
+                                  setLabelTextFmtIfChanged(ui_BrewScreen_targetDuration, "%2d:%02d", minutes, seconds);
                               }
                           },
                           &targetDuration, &targetVolume, &volumetricMode);
     effect_mgr.use_effect([=] { return currentScreen == ui_GrindScreen; },
                           [=]() {
                               if (volumetricMode) {
-                                  lv_label_set_text_fmt(ui_GrindScreen_targetDuration, "%.1fg", grindVolume);
+                                  setLabelTextFmtIfChanged(ui_GrindScreen_targetDuration, "%.1fg", grindVolume);
                               } else {
                                   const double secondsDouble = grindDuration / 1000.0;
                                   const auto minutes = static_cast<int>(secondsDouble / 60.0);
                                   const auto seconds = static_cast<int>(secondsDouble) % 60;
-                                  lv_label_set_text_fmt(ui_GrindScreen_targetDuration, "%2d:%02d", minutes, seconds);
+                                  setLabelTextFmtIfChanged(ui_GrindScreen_targetDuration, "%2d:%02d", minutes, seconds);
                               }
                           },
                           &grindDuration, &grindVolume, &volumetricMode);
     effect_mgr.use_effect(
         [=] { return currentScreen == ui_BrewScreen; },
         [=]() {
-            lv_img_set_src(ui_BrewScreen_Image4, volumetricMode ? &ui_img_1424216268 : &ui_img_360122106);
+            setImageSrcIfChanged(ui_BrewScreen_Image4, volumetricMode ? &ui_img_1424216268 : &ui_img_360122106);
             ui_object_set_themeable_style_property(ui_BrewScreen_weightLabel, LV_PART_MAIN | LV_STATE_DEFAULT,
                                                    LV_STYLE_TEXT_COLOR,
                                                    volumetricMode ? _ui_theme_color_Dark : _ui_theme_color_NiceWhite);
@@ -517,7 +583,7 @@ void DefaultUI::setupReactive() {
     effect_mgr.use_effect(
         [=] { return currentScreen == ui_GrindScreen; },
         [=]() {
-            lv_img_set_src(ui_GrindScreen_targetSymbol, volumetricMode ? &ui_img_1424216268 : &ui_img_360122106);
+            setImageSrcIfChanged(ui_GrindScreen_targetSymbol, volumetricMode ? &ui_img_1424216268 : &ui_img_360122106);
             ui_object_set_themeable_style_property(ui_GrindScreen_weightLabel, LV_PART_MAIN | LV_STATE_DEFAULT,
                                                    LV_STYLE_TEXT_COLOR,
                                                    volumetricMode ? _ui_theme_color_Dark : _ui_theme_color_NiceWhite);
@@ -550,7 +616,7 @@ void DefaultUI::setupReactive() {
                           },
                           &grindActive);
     effect_mgr.use_effect([=] { return currentScreen == ui_BrewScreen; },
-                          [=] { lv_label_set_text(ui_BrewScreen_profileName, selectedProfile.label.c_str()); },
+                          [=] { setLabelTextIfChanged(ui_BrewScreen_profileName, selectedProfile.label.c_str()); },
                           &selectedProfileId);
 
     effect_mgr.use_effect(
@@ -559,16 +625,16 @@ void DefaultUI::setupReactive() {
             if (profileLoaded) {
                 _ui_flag_modify(ui_ProfileScreen_profileDetails, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_REMOVE);
                 _ui_flag_modify(ui_ProfileScreen_loadingSpinner, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
-                lv_label_set_text(ui_ProfileScreen_profileName, currentProfileChoice.label.c_str());
+                setLabelTextIfChanged(ui_ProfileScreen_profileName, currentProfileChoice.label.c_str());
 
                 const auto minutes = static_cast<int>(currentProfileChoice.getTotalDuration() / 60.0 - 0.5);
                 const auto seconds = static_cast<int>(currentProfileChoice.getTotalDuration()) % 60;
-                lv_label_set_text_fmt(ui_ProfileScreen_targetDuration2, "%2d:%02d", minutes, seconds);
-                lv_label_set_text_fmt(ui_ProfileScreen_targetTemp2, "%d°C", static_cast<int>(currentProfileChoice.temperature));
+                setLabelTextFmtIfChanged(ui_ProfileScreen_targetDuration2, "%2d:%02d", minutes, seconds);
+                setLabelTextFmtIfChanged(ui_ProfileScreen_targetTemp2, "%d°C", static_cast<int>(currentProfileChoice.temperature));
                 unsigned int phaseCount = currentProfileChoice.getPhaseCount();
                 unsigned int stepCount = currentProfileChoice.phases.size();
-                lv_label_set_text_fmt(ui_ProfileScreen_stepsLabel, "%d step%s", stepCount, stepCount > 1 ? "s" : "");
-                lv_label_set_text_fmt(ui_ProfileScreen_phasesLabel, "%d phase%s", phaseCount, phaseCount > 1 ? "s" : "");
+                setLabelTextFmtIfChanged(ui_ProfileScreen_stepsLabel, "%d step%s", stepCount, stepCount > 1 ? "s" : "");
+                setLabelTextFmtIfChanged(ui_ProfileScreen_phasesLabel, "%d phase%s", phaseCount, phaseCount > 1 ? "s" : "");
             } else {
                 _ui_flag_modify(ui_ProfileScreen_profileDetails, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
                 _ui_flag_modify(ui_ProfileScreen_loadingSpinner, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_REMOVE);
@@ -592,25 +658,25 @@ void DefaultUI::setupReactive() {
     // Show/hide grind button based on SmartGrind setting or Alt Relay function
     effect_mgr.use_effect([=] { return currentScreen == ui_MenuScreen; },
                           [=]() {
-                              grindAvailable ? lv_obj_clear_flag(ui_MenuScreen_grindBtn, LV_OBJ_FLAG_HIDDEN)
-                                             : lv_obj_add_flag(ui_MenuScreen_grindBtn, LV_OBJ_FLAG_HIDDEN);
+                              grindAvailable ? clearFlagIfSet(ui_MenuScreen_grindBtn, LV_OBJ_FLAG_HIDDEN)
+                                             : addFlagIfMissing(ui_MenuScreen_grindBtn, LV_OBJ_FLAG_HIDDEN);
                           },
                           &grindAvailable);
     effect_mgr.use_effect([=] { return currentScreen == ui_BrewScreen; },
                           [=]() {
                               if (volumetricAvailable && bluetoothScales) {
-                                  lv_label_set_text_fmt(ui_BrewScreen_weightLabel, "%.1fg", bluetoothWeight);
+                                  setLabelTextFmtIfChanged(ui_BrewScreen_weightLabel, "%.1fg", bluetoothWeight);
                               } else {
-                                  lv_label_set_text(ui_BrewScreen_weightLabel, "-");
+                                  setLabelTextIfChanged(ui_BrewScreen_weightLabel, "-");
                               }
                           },
                           &bluetoothWeight, &volumetricAvailable, &bluetoothScales);
     effect_mgr.use_effect([=] { return currentScreen == ui_GrindScreen; },
                           [=]() {
                               if (volumetricAvailable && bluetoothScales) {
-                                  lv_label_set_text_fmt(ui_GrindScreen_weightLabel, "%.1fg", bluetoothWeight);
+                                  setLabelTextFmtIfChanged(ui_GrindScreen_weightLabel, "%.1fg", bluetoothWeight);
                               } else {
-                                  lv_label_set_text(ui_GrindScreen_weightLabel, "-");
+                                  setLabelTextIfChanged(ui_GrindScreen_weightLabel, "-");
                               }
                           },
                           &bluetoothWeight, &volumetricAvailable, &bluetoothScales);
@@ -626,12 +692,12 @@ void DefaultUI::setupReactive() {
             _ui_flag_modify(ui_BrewScreen_modeSwitch, LV_OBJ_FLAG_HIDDEN,
                             brewScreenState == BrewScreenState::Brew && volumetricAvailable);
             if (volumetricAvailable) {
-                lv_img_set_src(ui_BrewScreen_volumetricButton, bluetoothScales ? &ui_img_1424216268 : &ui_img_flowmeter_png);
+                setImageSrcIfChanged(ui_BrewScreen_volumetricButton, bluetoothScales ? &ui_img_1424216268 : &ui_img_flowmeter_png);
             }
         },
         &brewScreenState, &volumetricAvailable, &bluetoothScales);
     effect_mgr.use_effect([=] { return currentScreen == ui_StandbyScreen; },
-                          [=]() { lv_img_set_src(ui_StandbyScreen_logo, christmasMode ? &ui_img_1510335 : &ui_img_logo_png); },
+                          [=]() { setImageSrcIfChanged(ui_StandbyScreen_logo, christmasMode ? &ui_img_1510335 : &ui_img_logo_png); },
                           &christmasMode);
 }
 
@@ -672,18 +738,18 @@ void DefaultUI::updateStandbyScreen() {
             Settings &settings = controller->getSettings();
             const char *format = settings.isClock24hFormat() ? "%H:%M" : "%I:%M %p";
             strftime(time, sizeof(time), format, &timeinfo);
-            lv_label_set_text(ui_StandbyScreen_time, time);
-            lv_obj_clear_flag(ui_StandbyScreen_time, LV_OBJ_FLAG_HIDDEN);
+            setLabelTextIfChanged(ui_StandbyScreen_time, time);
+            clearFlagIfSet(ui_StandbyScreen_time, LV_OBJ_FLAG_HIDDEN);
 
             christmasMode = timeinfo.tm_mon == 11 && timeinfo.tm_mday < 27;
         }
     } else {
-        lv_obj_add_flag(ui_StandbyScreen_time, LV_OBJ_FLAG_HIDDEN);
+        addFlagIfMissing(ui_StandbyScreen_time, LV_OBJ_FLAG_HIDDEN);
     }
-    controller->getClientController()->isConnected() ? lv_obj_clear_flag(ui_StandbyScreen_bluetoothIcon, LV_OBJ_FLAG_HIDDEN)
-                                                     : lv_obj_add_flag(ui_StandbyScreen_bluetoothIcon, LV_OBJ_FLAG_HIDDEN);
-    !apActive &&WiFi.status() == WL_CONNECTED ? lv_obj_clear_flag(ui_StandbyScreen_wifiIcon, LV_OBJ_FLAG_HIDDEN)
-                                              : lv_obj_add_flag(ui_StandbyScreen_wifiIcon, LV_OBJ_FLAG_HIDDEN);
+    controller->getClientController()->isConnected() ? clearFlagIfSet(ui_StandbyScreen_bluetoothIcon, LV_OBJ_FLAG_HIDDEN)
+                                                     : addFlagIfMissing(ui_StandbyScreen_bluetoothIcon, LV_OBJ_FLAG_HIDDEN);
+    !apActive &&WiFi.status() == WL_CONNECTED ? clearFlagIfSet(ui_StandbyScreen_wifiIcon, LV_OBJ_FLAG_HIDDEN)
+                                              : addFlagIfMissing(ui_StandbyScreen_wifiIcon, LV_OBJ_FLAG_HIDDEN);
 }
 
 void DefaultUI::updateStatusScreen() const {
@@ -735,8 +801,8 @@ void DefaultUI::updateStatusScreen() const {
         }
     }
 
-    lv_label_set_text(ui_StatusScreen_stepLabel, phase.phase == PhaseType::PHASE_TYPE_BREW ? "BREW" : "INFUSION");
-    lv_label_set_text(ui_StatusScreen_phaseLabel, brewProcess && brewProcess->isActive() ? phase.name.c_str() : "Finished");
+    setLabelTextIfChanged(ui_StatusScreen_stepLabel, phase.phase == PhaseType::PHASE_TYPE_BREW ? "BREW" : "INFUSION");
+    setLabelTextIfChanged(ui_StatusScreen_phaseLabel, brewProcess && brewProcess->isActive() ? phase.name.c_str() : "Finished");
 
     // Add bounds check for processStarted timestamp
     if (brewProcess && brewProcess->processStarted > 0 && now >= brewProcess->processStarted) {
@@ -744,27 +810,27 @@ void DefaultUI::updateStatusScreen() const {
         const double processSecondsDouble = processDuration / 1000.0;
         const auto processMinutes = static_cast<int>(processSecondsDouble / 60.0);
         const auto processSeconds = static_cast<int>(processSecondsDouble) % 60;
-        lv_label_set_text_fmt(ui_StatusScreen_currentDuration, "%2d:%02d", processMinutes, processSeconds);
+        setLabelTextFmtIfChanged(ui_StatusScreen_currentDuration, "%2d:%02d", processMinutes, processSeconds);
     } else {
-        lv_label_set_text_fmt(ui_StatusScreen_currentDuration, "00:00");
+        setLabelTextFmtIfChanged(ui_StatusScreen_currentDuration, "00:00");
     }
 
     if (brewProcess && brewProcess->target == ProcessTarget::VOLUMETRIC && phase.hasVolumetricTarget()) {
         Target target = phase.getVolumetricTarget();
-        lv_bar_set_value(ui_StatusScreen_brewBar, brewProcess->currentVolume * 10.0, LV_ANIM_OFF);
-        lv_bar_set_range(ui_StatusScreen_brewBar, 0, target.value * 10.0 + 1.0);
-        lv_label_set_text_fmt(ui_StatusScreen_brewLabel, "%.1fg", target.value);
+        setBarValueIfChanged(ui_StatusScreen_brewBar, brewProcess->currentVolume * 10.0, LV_ANIM_OFF);
+        setBarRangeIfChanged(ui_StatusScreen_brewBar, 0, target.value * 10.0 + 1.0);
+        setLabelTextFmtIfChanged(ui_StatusScreen_brewLabel, "%.1fg", target.value);
     } else if (brewProcess) {
         // Add bounds check for currentPhaseStarted timestamp
         if (brewProcess->currentPhaseStarted > 0 && now >= brewProcess->currentPhaseStarted) {
             const unsigned long progress = now - brewProcess->currentPhaseStarted;
-            lv_bar_set_value(ui_StatusScreen_brewBar, progress, LV_ANIM_OFF);
-            lv_bar_set_range(ui_StatusScreen_brewBar, 0, std::max(static_cast<int>(brewProcess->getPhaseDuration()), 1));
-            lv_label_set_text_fmt(ui_StatusScreen_brewLabel, "%ds", brewProcess->getPhaseDuration() / 1000);
+            setBarValueIfChanged(ui_StatusScreen_brewBar, progress, LV_ANIM_OFF);
+            setBarRangeIfChanged(ui_StatusScreen_brewBar, 0, std::max(static_cast<int>(brewProcess->getPhaseDuration()), 1));
+            setLabelTextFmtIfChanged(ui_StatusScreen_brewLabel, "%ds", brewProcess->getPhaseDuration() / 1000);
         } else {
-            lv_bar_set_value(ui_StatusScreen_brewBar, 0, LV_ANIM_OFF);
-            lv_bar_set_range(ui_StatusScreen_brewBar, 0, 1);
-            lv_label_set_text(ui_StatusScreen_brewLabel, "0s");
+            setBarValueIfChanged(ui_StatusScreen_brewBar, 0, LV_ANIM_OFF);
+            setBarRangeIfChanged(ui_StatusScreen_brewBar, 0, 1);
+            setLabelTextIfChanged(ui_StatusScreen_brewLabel, "0s");
         }
     }
 
@@ -773,12 +839,12 @@ void DefaultUI::updateStatusScreen() const {
         const double targetSecondsDouble = targetDuration / 1000.0;
         const auto targetMinutes = static_cast<int>(targetSecondsDouble / 60.0);
         const auto targetSeconds = static_cast<int>(targetSecondsDouble) % 60;
-        lv_label_set_text_fmt(ui_StatusScreen_targetDuration, "%2d:%02d", targetMinutes, targetSeconds);
+        setLabelTextFmtIfChanged(ui_StatusScreen_targetDuration, "%2d:%02d", targetMinutes, targetSeconds);
     } else if (brewProcess) {
-        lv_label_set_text_fmt(ui_StatusScreen_targetDuration, "%.1fg", brewProcess->getBrewVolume());
+        setLabelTextFmtIfChanged(ui_StatusScreen_targetDuration, "%.1fg", brewProcess->getBrewVolume());
     }
     if (brewProcess) {
-        lv_img_set_src(ui_StatusScreen_Image8,
+        setImageSrcIfChanged(ui_StatusScreen_Image8,
                        brewProcess->target == ProcessTarget::TIME ? &ui_img_360122106 : &ui_img_1424216268);
     }
 
@@ -793,16 +859,16 @@ void DefaultUI::updateStatusScreen() const {
 
     // Brew finished adjustments
     if (process->isActive()) {
-        lv_obj_add_flag(ui_StatusScreen_brewVolume, LV_OBJ_FLAG_HIDDEN);
+        addFlagIfMissing(ui_StatusScreen_brewVolume, LV_OBJ_FLAG_HIDDEN);
     } else {
         // Re-validate brewProcess pointer before accessing members
         if (brewProcess && brewProcess->target == ProcessTarget::VOLUMETRIC) {
-            lv_obj_clear_flag(ui_StatusScreen_brewVolume, LV_OBJ_FLAG_HIDDEN);
+            clearFlagIfSet(ui_StatusScreen_brewVolume, LV_OBJ_FLAG_HIDDEN);
         }
-        lv_obj_add_flag(ui_StatusScreen_barContainer, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(ui_StatusScreen_labelContainer, LV_OBJ_FLAG_HIDDEN);
+        addFlagIfMissing(ui_StatusScreen_barContainer, LV_OBJ_FLAG_HIDDEN);
+        addFlagIfMissing(ui_StatusScreen_labelContainer, LV_OBJ_FLAG_HIDDEN);
         if (brewProcess) {
-            lv_label_set_text_fmt(ui_StatusScreen_brewVolume, "%.1lfg", brewProcess->currentVolume);
+            setLabelTextFmtIfChanged(ui_StatusScreen_brewVolume, "%.1lfg", brewProcess->currentVolume);
         }
         lv_imgbtn_set_src(ui_StatusScreen_pauseButton, LV_IMGBTN_STATE_RELEASED, nullptr, &ui_img_631115820, nullptr);
     }
